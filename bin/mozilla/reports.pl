@@ -146,6 +146,7 @@ $selectfrom
 <hr/>
 <input type=hidden name=runit value=1>
 <input type=submit name=action class="submit noprint" value="Continue">
+<input type="submit" class="submit noprint" formmethod="get" formaction="mojo.pl/ustva/download" value="Download Preliminary VAT Return">
 </form>
 |;
 
@@ -413,7 +414,11 @@ $selectfrom
         ORDER BY 1, 2, 3, 6
     ~;
 
-    my @allrows = $form->{dbs}->query($query)->hashes or die( $form->{dbs}->error ) if $form->{runit};
+    my @allrows = $form->{dbs}->query($query)->hashes if $form->{runit};
+
+    # use Data::Dumper;
+    # $Data::Dumper::Sortkeys = 1;
+    # print "<pre>", Dumper(\@allrows), "</pre>";
 
     #-- Report summary starts
     if ($form->{runit}){
@@ -4547,7 +4552,7 @@ sub projects_list {
    my $groupbreak = 'none';
    $form->{accounttype} = 'standard';
    while (my $ref = $sth->fetchrow_hashref(NAME_lc)){
-    $form->{link} = qq|rp.pl?action=continue&nextsub=generate_projects&projectnumber=$ref->{projectnumber}--$ref->{id}|;
+    $form->{link} = qq|rp.pl?action=continue&nextsub=generate_projects&fx_transaction=1&projectnumber=$ref->{projectnumber}--$ref->{id}|;
         for (qw(accounttype datefrom dateto l_subtotal path login)){ $form->{link} .= "&$_=$form->{$_}" }
     $groupbreak = $ref->{$form->{sort}} if $groupbreak eq 'none';
     if ($form->{l_subtotal}){

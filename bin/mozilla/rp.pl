@@ -290,14 +290,13 @@ qq|<option value="$myconfig{department}--$myconfig{department_id}">$myconfig{dep
   <tr>
     <td>
       <table>
-	<tr>
-	  <th align=right nowrap>| . $locale->text('Include in Report') . qq|</th>
-	  <td><input name=l_heading class=checkbox type=checkbox value=Y>&nbsp;|
-		  . $locale->text('Heading') . qq|
-	  <input name=l_subtotal class=checkbox type=checkbox value=Y>&nbsp;|
-		  . $locale->text('Subtotal')
-		  . qq|</td>
-	</tr>
+        <tr>
+          <th align=right nowrap>|.$locale->text('Include in Report').qq|</th>
+          <td><input name=l_heading class=checkbox type=checkbox value=Y>&nbsp;|.$locale->text('Heading').qq|
+             <input name=l_subtotal class=checkbox type=checkbox value=Y>&nbsp;|.$locale->text('Subtotal').qq|
+             <input type=checkbox class=checkbox name=fx_transaction value=1 checked> |.$locale->text('Include Exchange Rate Difference').qq|
+          </td>
+        </tr>
 |;
 	}
 
@@ -1180,12 +1179,12 @@ sub generate_balance_sheet {
 	$form->{endbold} = "</strong>";
 	$form->{br}      = "<br>\n";
 
-	RP->balance_sheet( \%myconfig, \%$form );
-
-	$form->{asofdate} = $form->current_date( \%myconfig )
-	  unless $form->{asofdate};
+    $form->{asofdate} = $form->current_date( \%myconfig )
+      unless $form->{asofdate} or ($form->{asofmonth} and $form->{asofyear});
 	$form->{period} =
 	  $locale->date( \%myconfig, $form->current_date( \%myconfig ), 1 );
+
+	RP->balance_sheet( \%myconfig, \%$form );
 
 	( $form->{department} ) = split /--/, $form->{department};
 
