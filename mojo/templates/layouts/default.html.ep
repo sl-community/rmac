@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= title %></title>
+
+    %= stylesheet '/css/legacy/' . userconfig->val('stylesheet')
+    
+  </head>
+  <body>
+    <%= content %>
+  </body>
+</html>
