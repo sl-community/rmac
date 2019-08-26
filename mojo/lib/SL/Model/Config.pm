@@ -130,6 +130,23 @@ sub new {
         $lang = 'de' if $lang eq 'ch';
         $_self->{userconfig}{x_language} = $lang;
 
+
+        # Connection string for Mojo::Pg
+        my $connstr = "";
+        $connstr .= "postgresql://";
+        $connstr .= $_self->val('dbuser');
+        $connstr .= ':';
+        $connstr .= $_self->val('dbpasswd');
+        $connstr .= '@';
+        $connstr .= $_self->val('dbhost');
+        $connstr .= (':' . $_self->val('dbport')) if $_self->val('dbport');
+        $connstr .= '/';
+        $connstr .= $_self->val('dbname');
+
+        $_self->{userconfig}{x_pg_connstr} = $connstr;
+
+
+        
         # Some root specials:
         if (%rootconfig) {
             # root needs no stylesheet, but this avoids warnings in the log:
