@@ -1,0 +1,13 @@
+% layout 'default';
+% title l 'GoBD Export';
+% languages userconfig->val('x_language');
+
+<h1 class='listtop'><%= l 'GoBD Export'%></h1>
+
+%= form_for '/gobd/generate' => (method => 'GET') => begin
+
+%= include '_partial/date_interval_picker', offer_years => 10
+
+%= submit_button l('Continue'), class => 'submit'
+
+% end

@@ -1,4 +1,4 @@
-package SL::Helpers;
+package SL::Helper::Basic;
 use base 'Mojolicious::Plugin';
 use strict;
 use warnings;

@@ -9,7 +9,7 @@ sub startup {
     # "development" or "production":
     $self->mode('production') unless exists $ENV{MOJO_MODE};
 
-    $self->plugin('SL::Helpers');
+    $self->plugin('SL::Helper::Basic');
     $self->plugin('I18N', no_header_detect => 1);
     
     $self->secrets(['ok3YeeSeGh5sighe']);
@@ -57,9 +57,15 @@ sub startup {
 
 
     
-    $auth->get('/hello')->to('Mojolicious#hello');
-    $auth->get('/sysinfo')->to('Mojolicious#sysinfo');
+    $auth->get('/hello')      ->to('Mojolicious#hello');
+    $auth->get('/sysinfo')    ->to('Mojolicious#sysinfo');
+    $auth->get('/expire')     ->to('Mojolicious#expire');
+    $auth->get('/clear_spool')->to('Mojolicious#clear_spool');
 
+    $auth->any('/gobd/start')          ->to('GoBD#start');
+    $auth->any('/gobd/generate')       ->to('GoBD#generate');
+    $auth->get('/gobd/show/#filename') ->to('GoBD#show');
+    $auth->get('/gobd/download')       ->to('GoBD#download');
 }
 
 
