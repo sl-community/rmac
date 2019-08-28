@@ -39,7 +39,7 @@ sub new {
         "_gobd"
     );
 
-    # workdir is now something like /srv/www/sql-ledger/spool/john/gobd.
+    # workdir is now something like /srv/www/sql-ledger/spool/john/_gobd.
     # ensure that it exists and is empty:
     make_path($self->{workdir});
     remove_tree($self->{workdir}, {keep_root => 1} );
