@@ -66,6 +66,9 @@ sub startup {
     $auth->any('/gobd/generate')       ->to('GoBD#generate');
     $auth->get('/gobd/show/#filename') ->to('GoBD#show');
     $auth->get('/gobd/download')       ->to('GoBD#download');
+
+    $auth->any('/pvr/start')    ->to('PVR#start');
+    $auth->any('/pvr/generate') ->to('PVR#generate');
 }
 
 
