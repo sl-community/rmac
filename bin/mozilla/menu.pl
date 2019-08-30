@@ -108,6 +108,7 @@ function SwitchMenuAndSub(menu, submenu) {
 
 <body class=menu>
 
+<img src=$images/sql-ledger.gif width=80 border=0>
 |;
 
   if ($form->{js}) {
