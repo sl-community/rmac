@@ -2,6 +2,7 @@
 <html>
   <head>
     <title><%= title %></title>
+    <meta charset="utf-8">
 
     %= stylesheet '/css/legacy/' . userconfig->val('stylesheet')
     %= javascript '/js/jquery.min.js'
@@ -15,6 +16,7 @@
     </style>
     
   </head>
+  
   <body>
     <%= content %>
   </body>
