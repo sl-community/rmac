@@ -49,6 +49,63 @@ sub register {
         }
     );
 
+
+    $app->helper( # The user pages dont need this, because it is in config.
+        admin_pg_connstr => sub {
+            my $self = shift;
+            my %args = @_;
+
+            $self->session(dbhost    => $args{dbhost})    if $args{dbhost};
+            $self->session(dbdefault => $args{dbdefault}) if $args{dbdefault};
+            $self->session(dbname    => $args{dbname})    if $args{dbname};
+            $self->session(dbuser    => $args{dbuser})    if $args{dbuser};
+            $self->session(dbpasswd  => $args{dbpasswd})  if $args{dbpasswd};
+            $self->session(dbport    => $args{dbport})    if $args{dbport};
+            
+            my $connstr = "";
+            $connstr .= "postgresql://";
+            $connstr .= $self->session('dbuser');
+            $connstr .= ':';
+            $connstr .= $self->session('dbpasswd')
+                if $self->session('dbpasswd');
+            $connstr .= '@';
+            $connstr .= $self->session('dbhost');
+            $connstr .= (':' . $self->session('dbport'))
+                if $self->session('dbport');
+            $connstr .= '/';
+            $connstr .= ($self->session('dbname') // $self->session('dbdefault'));
+
+            return $connstr;
+        }
+    );
+
+
+    $app->helper( # render an exception page
+        exception => sub {
+            my $self = shift;
+            my ($short, $long) = @_;
+
+            $self->render(template => "error",
+                          short    => $short,
+                          long     => $long);
+            return 1;
+        }
+    );
+    
+    $app->helper( # render an exception page if an exception ($@) happened
+        exception_happened => sub {
+            my $self = shift;
+            my ($short, $long) = @_;
+
+            return 0 unless $@;
+
+            $self->render(template => "error",
+                          short    => $short // 'Error',
+                          long     => ($long // $@ // undef));
+
+            return 1;
+        }
+    );
     
 }
 

@@ -26,7 +26,7 @@ $(document).ready(function() {
     <%= l 'Export successful' %>.</span>
     % }
     
-  (<a id='toggle_log' href="#"/><%= l "Show log" %></a>)
+  (<a id='toggle_log' href="#"><%= l "Show log" %></a>)
 </p>
 
 <%== $export->log->to_html("trace") %>

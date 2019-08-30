@@ -13,6 +13,14 @@ case $1 in
     down)
 	$COMPOSE down
 	;;
+    update)
+	for i in $(find . -name Dockerfile |xargs sed -rn 's/^FROM (.*)/\1/gp')
+	do
+	    docker pull $i
+	done
+
+	$SCRIPT up
+	;;
     logs)
 	shift
 	$COMPOSE logs "$@"
@@ -42,6 +50,8 @@ Where COMMAND is one of:
     up                       (Re)build and (re)create containers
 
     down                     Bring everything down
+
+    update                   Pull base images and rebuild
 
     logs                     Show logs
 
