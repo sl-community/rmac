@@ -1,6 +1,9 @@
 % use Time::Piece;
+
 % my $now = localtime;
-% my @display_years = map { $now->year - $_ } ( 0 .. $offer_years-1);
+% my $to_year = stash('to_year') // $now->year;
+% my @display_years = ( $from_year .. $to_year );
+
 % our $value_error = 1;
 
 <table>
@@ -17,8 +20,6 @@
     </td>
   </tr>
 
-  <tr><td /><td>...<%= l 'or'%>...</td></tr>
-  
   <tr>
     <th align=right><%= l 'Period'%></th>
     <td>
@@ -44,7 +45,7 @@
 
       &nbsp;&nbsp;&nbsp;
       <%= radio_button interval => '0', class => 'radio' %>
-      <span class="radio"><%= l 'Until now' %>&nbsp;</span>
+      <span class="radio"><%= l 'Current' %>&nbsp;</span>
       
       <%= radio_button interval => '1', class => 'radio' %>
       <span class="radio"><%= l 'Month' %>&nbsp;</span>

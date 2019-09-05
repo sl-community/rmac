@@ -6,6 +6,7 @@ use Mojo::File;
 
 use SL::Model::Config;
 use SL::Model::Calc::Document;
+use SL::Model::SQL::Statement;
 
 use utf8;
 use Time::Piece;
@@ -16,7 +17,16 @@ use File::Path qw(make_path remove_tree);
 sub start {
     my $c = shift;
 
-    $c->render("pvr/start");
+    my $conf = SL::Model::Config->instance($c);
+    
+    my $sth = SL::Model::SQL::Statement->new(
+        config => $conf,
+        query  => "common/earliest_trans_year"
+    );
+    
+    my $result = $sth->execute->fetch;
+    
+    $c->render("pvr/start", earliest_trans_year => $result->[0][0]);
 }
 
 
