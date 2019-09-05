@@ -6,7 +6,7 @@
 
 %= form_for '/pvr/generate' => (method => 'GET') => begin
 
-%= include '_partial/date_interval_picker', offer_years => 5
+%= include '_partial/date_interval_picker', from_year => $earliest_trans_year
 
 %= submit_button l('Create'), class => 'submit'
 

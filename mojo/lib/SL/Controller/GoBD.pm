@@ -5,6 +5,8 @@ use Mojo::File;
 
 use SL::Model::Config;
 use SL::Model::GoBD::Export;
+use SL::Model::SQL::Statement;
+
 use File::Spec;
 use File::Basename;
 use utf8;
@@ -12,7 +14,16 @@ use utf8;
 sub start {
     my $c = shift;
 
-    $c->render("gobd/start");
+    my $conf = SL::Model::Config->instance($c);
+    
+    my $sth = SL::Model::SQL::Statement->new(
+        config => $conf,
+        query  => "common/earliest_trans_year"
+    );
+    
+    my $result = $sth->execute->fetch;
+    
+    $c->render("gobd/start", earliest_trans_year => $result->[0][0]);
 }
 
 
