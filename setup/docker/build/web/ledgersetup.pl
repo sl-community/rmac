@@ -174,8 +174,10 @@ sub setup {
         if (!$db_exists) {
             say STDERR "Setup database: $dbname";
             # CREATE DATABASE is included in dump.
-            #system "createdb -h db -e -U postgres $dbname"; 
-            system "acat $dumpfile | psql -o /dev/null -h db -U postgres -q";
+            #system "createdb -h db -e -U postgres $dbname";
+
+            my $zipcat = $ENV{LEDGER_DOCUMENT_ROOT} . "/bin/zipcat.pl";
+            system "$zipcat $dumpfile | psql -o /dev/null -h db -U postgres -q";
         }
     }
 

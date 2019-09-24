@@ -21,6 +21,7 @@ RUN apt-get update  && \
       libgd-graph-perl \
       libxml-libxml-perl \
       libfile-pushd-perl \
+      libfile-type-perl \
       libtext-csv-xs-perl \
       libopenoffice-oodoc-perl \
       libyaml-perl \
@@ -31,8 +32,8 @@ RUN apt-get update  && \
       libmojo-pg-perl \
       postgresql-client \
       zip \
-      less \
-      atool
+      bzip2 \
+      less
 
 RUN apt-get install -y \
     cpanminus \

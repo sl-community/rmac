@@ -57,10 +57,10 @@ sub startup {
 
 
     
-    $auth->get('/hello')      ->to('Mojolicious#hello');
-    $auth->get('/sysinfo')    ->to('Mojolicious#sysinfo');
-    $auth->get('/expire')     ->to('Mojolicious#expire');
-    $auth->get('/clear_spool')->to('Mojolicious#clear_spool');
+    $auth->any('/hello')      ->to('Mojolicious#hello');
+    $auth->any('/sysinfo')    ->to('Mojolicious#sysinfo');
+    $auth->any('/expire')     ->to('Mojolicious#expire');
+    $auth->any('/clear_spool')->to('Mojolicious#clear_spool');
 
     $auth->any('/gobd/start')          ->to('GoBD#start');
     $auth->any('/gobd/generate')       ->to('GoBD#generate');
@@ -69,6 +69,14 @@ sub startup {
 
     $auth->any('/pvr/start')    ->to('PVR#start');
     $auth->any('/pvr/generate') ->to('PVR#generate');
+
+    
+    $auth->any('/admin/backup_restore/start')
+        ->to('Admin::BackupRestore#start')->name('admin_br_start');
+    $auth->any('/admin/backup_restore/backup/:dbname')
+        ->to('Admin::BackupRestore#backup')->name('admin_br_backup');
+    $auth->any('/admin/backup_restore/restore')
+        ->to('Admin::BackupRestore#restore')->name('admin_br_restore');
 }
 
 
@@ -88,7 +96,7 @@ sub logged_in {
     
     my $s = "";
     my %ndx = ();
-    my $l = length $cookievalue;
+    my $l = length($cookievalue) || return 0;
     my $j;
     
     for my $i (0 .. $l - 1) {
