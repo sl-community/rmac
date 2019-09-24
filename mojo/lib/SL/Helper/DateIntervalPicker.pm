@@ -18,7 +18,7 @@ sub register {
         foo => sub {
             my $self = shift;
 
-            my ($from_iso, $to_iso);
+            my ($t1, $t2);
 
             my $fromdate = $self->param('fromdate');
             my $todate   = $self->param('todate');
@@ -33,29 +33,23 @@ sub register {
 
                 my $formats = $self->userconfig->val('x_dateformat_strptime');
      
-                my ($t1, $t2);
                 eval { # For most dateformats the 4-digit year version:
                     # Let strptime be more "strict":
                     local $SIG{__WARN__} = sub { die };
                     $t1 = Time::Piece->strptime($fromdate, $formats->[0]);
                     $t2 = Time::Piece->strptime($todate,   $formats->[0]);
                 };
-                if (!$@) {
-                    ($from_iso, $to_iso) = ($t1->ymd, $t2->ymd);
-                }
 
-                eval { # Otherwise with 2-digit year:
-                    local $SIG{__WARN__} = sub { die };
-                    $t1 = Time::Piece->strptime($fromdate, $formats->[1]);
-                    $t2 = Time::Piece->strptime($todate,   $formats->[1]);
-                };
-                if (!$@) {
-                    ($from_iso, $to_iso) = ($t1->ymd, $t2->ymd);
+                if ($@) { # Otherwise with 2-digit year:
+                    eval { # Otherwise with 2-digit year:
+                        local $SIG{__WARN__} = sub { die };
+                        $t1 = Time::Piece->strptime($fromdate, $formats->[1]);
+                        $t2 = Time::Piece->strptime($todate,   $formats->[1]);
+                    };
                 }
             }
             
             else {  # the interval stuff:
-                my $from_obj;
                 my $from;
                 
                 if (!$month && $year) {
@@ -70,37 +64,47 @@ sub register {
                 
                 eval {
                     local $SIG{__WARN__} = sub { die };
-                    $from_obj = Time::Piece->strptime($from, "%Y-%m-%d");
-                    $from_iso = $from_obj->ymd;
+                    $t1 = Time::Piece->strptime($from, "%Y-%m-%d");
                 };
                 return if $@;
                 
-                my $to_obj;
-
                 return unless defined $interval;
                 
                 if ($interval eq '0') {
                     my $t = localtime;
-                    $to_iso = $t->ymd;
+                    $t2 = $t->ymd;
                 }
                 elsif ($interval eq '1' && $month) {
-                    $to_obj = $from_obj->add_months(1);
-                    $to_obj -= ONE_DAY;
-                    $to_iso = $to_obj->ymd;
+                    $t2 = $t1->add_months(1);
+                    $t2 -= ONE_DAY;
                 }
                 elsif ($interval eq '3' && $month) {
-                    $to_obj = $from_obj->add_months(3);
-                    $to_obj -= ONE_DAY;
-                    $to_iso = $to_obj->ymd;
+                    $t2 = $t1->add_months(3);
+                    $t2 -= ONE_DAY;
                 }
                 elsif ($interval eq '12' ) {
-                    $to_obj = $from_obj->add_years(1);
-                    $to_obj -= ONE_DAY;
-                    $to_iso = $to_obj->ymd;
+                    $t2 = $t1->add_years(1);
+                    $t2 -= ONE_DAY;
                 }
             }
 
-            return ($from_iso, $to_iso);
+            # Finally detect type of interval:
+            my $delta = $t2 - $t1;
+            my $days = $delta->days;
+
+            my $interval_text;
+
+            if ($days >=25 && $days <= 35) {
+                $interval_text = 'month';
+            }
+            elsif ($days >=85 && $days <= 95) {
+                $interval_text = 'quarter';
+            }
+            elsif ($days >= 360 && $days <= 370) {
+                $interval_text = 'year';
+            }
+            
+            return ($t1->ymd, $t2->ymd, $interval_text);
         }
     );
 
