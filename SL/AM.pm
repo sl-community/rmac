@@ -1440,8 +1440,8 @@ sub save_defaults {
 
   # optional
   for (split / /, $form->{optional}) {
+    $delsth->execute($_) || $form->dberror;
     if ($form->{$_}) {
-      $delsth->execute($_) || $form->dberror;
       $sth->execute($_, $form->{$_}) || $form->dberror;
       $sth->finish;
     }
@@ -1614,7 +1614,7 @@ sub backup {
     my $today = scalar localtime;
 
     if ( $form->{media} eq 'email' ) {
-        print OUT qx(PGPASSWORD="$myconfig->{dbpasswd}" /usr/bin/pg_dump -U $myconfig->{dbuser} $myconfig->{dbname} | gzip -c);
+        print OUT qx(PGPASSWORD="$myconfig->{dbpasswd}" /usr/bin/pg_dump -C -U $myconfig->{dbuser} $myconfig->{dbname} | gzip -c);
         close OUT;
 
         use SL::Mailer;
