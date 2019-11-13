@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ENV_FILE=~/.sql-ledger.local.env
+ENV_FILE=~/.sql-ledger.env
 LINK=.env
 
 
@@ -13,23 +13,18 @@ else
 ###############################
 
 LEDGER_PORT=4293
-LEDGERSETUP_CONFIG_PATH=
-LEDGERSETUP_DUMP_PATH=
+LEDGERSETUP_CONFIG_PATH=/tmp/ledgersetup/config
+LEDGERSETUP_DUMPS_PATH=/tmp/ledgersetup/dumps
 
 
-###################################
-# These shoud be ok for most of us:
-###################################
+####################
+# These shoud be ok:
+####################
 
-COMPOSE_PROJECT_NAME=sql-ledger
-
-LEDGER_DOCUMENT_ROOT=/srv/www/sql-ledger
 LEDGER_POSTGRES_USER=sql-ledger
 
-LEDGER_APACHE_RUN_USER=$(id -un)
-LEDGER_APACHE_RUN_USERID=$(id -u)
-LEDGER_APACHE_RUN_GROUP=$(id -gn)
-LEDGER_APACHE_RUN_GROUPID=$(id -g)
+LEDGER_UID=$(id -u)
+LEDGER_GID=$(id -g)
 EOF
     echo "Environment file created: $ENV_FILE" 1>&2
     echo "Please adjust it to your needs." 1>&2

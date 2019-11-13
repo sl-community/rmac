@@ -1,0 +1,38 @@
+version: "3"
+
+services:
+  web:
+    image: local/rmac/web
+    build:
+      context: build/web
+      args:
+        USAGE: staging
+        GIT_URL: ${GIT_URL:-https://github.com/sl-community/rmac2.git}
+        GIT_BRANCH: ${GIT_BRANCH:-develop}
+    environment:
+      LEDGER_POSTGRES_USER: ${LEDGER_POSTGRES_USER:-sql-ledger}
+    ports:
+      - ${LEDGER_PORT:-4293}:80
+    networks:
+      - private
+    volumes:
+      - ${LEDGERSETUP_CONFIG_PATH:-/tmp/ledgersetup/configs}:/ledgersetup/configs:ro
+      - ${LEDGERSETUP_DUMPS_PATH:-/tmp/ledgersetup/dumps}:/ledgersetup/dumps:ro
+
+  db:
+    environment:
+      LEDGER_POSTGRES_USER: ${LEDGER_POSTGRES_USER:-sql-ledger}
+    image: local/rmac/db
+    build:
+      context: build/db
+    networks:
+      - private
+    volumes:
+      - data:/var/lib/postgresql/data
+
+
+volumes:
+  data:
+
+networks:
+  private:

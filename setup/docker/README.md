@@ -9,21 +9,24 @@ Docker-based setups of SQL-Ledger.
 
 * Docker
 * `docker-compose`
-* For local development: Normal user account with permission to execute Docker commands
+* For local development: Normal user account with permission to execute 
+Docker commands
 
 
 ## Local development
 
 The goal is to get a SQL-Ledger container that operates directly
 on the sources (with a bind mount), so that any change of the sources
-will direcly affect the bahaviour of the application.
+will direcly affect the behaviour of the application.
+
+### Prerequisites for local development
 
 At the very first time, enter this folder and run
 
-    ./local-env-setup.sh
+    ./env-setup.sh
 
-This will set up a file ~/.sql-ledger.local.env containing
-enrironment variables needed for `docker-compose` and a symbolic
+This will set up a file ~/.sql-ledger.env containing
+environment variables needed for `docker-compose` and a symbolic
 link '.env' to this file. The `.env` file is the one that
 `docker-compose` is looking for; the linking is just for
 persistency reasons. 
@@ -31,42 +34,22 @@ persistency reasons.
 For the moment, all settings should be fine. We'll come back to that later.
 
 
-### Basic development container without containerized database
+### Manage development containers via `ledgerctl`
 
-This is only useful if you have a PostgreSQL database elsewhere. But give it a try &ndash; the scenario is much simpler if problems occur.
+    ./ledgerctl develop.yml up
 
-Call
-
-    docker-compose -f web.local.yml build
-
-for a first build. If it works trouble-free, then call
-
-    docker-compose -f web.local.yml up -d
-
-If you have to rebuild the image in the future, you could also do that
-with a single call:
-
-    docker-compose -f web.local.yml up -d --build --force-recreate
-
-
-Now the application should be reachable at http://localhost:4293,
+When called for the first time, the images have to be build, which
+will take some time. After a few minutes,
+the application should be reachable at http://localhost:4293,
 but there are no accounts and the admin account is not yet usable.
 To initialize, call
 
-    docker-compose -f web.local.yml exec web ledgersetup.pl --initweb
+    ./ledgerctl develop.yml init
 
-This will setup the application root account with password 'secret'; you can choose another one with `--rootpw PASSWORD`.
+This will setup the application root account with password 'secret';
+you can choose another one with `--rootpw PASSWORD`.
 
 After that you can admin-login at http://localhost:4293/admin.pl.
-
-
-### Standard development container with additional database container
-
-This is the typical use-case.
-
-To restart the application with an additional database container, do:
-
-    docker-compose -f web.local.yml -f db.local.yml up -d --build --force-recreate
 
 Now you could create datasets, create users, ...
 The name of the database host is "`db`", the name of the
@@ -75,36 +58,44 @@ in your `.env` file, but if you already have started a database
 container you would have to stop it and remove the postgresql
 volume before recreating.)
 
-You may prefer to use the convenience script to achieve the same:
+To bring everything down, call
 
-    ./ledgerctl up
+    ./ledgerctl develop.yml down
 
-(Run `./ledgerctl` to get an overview of all possibilities.)
+or even
+
+    ./ledgerctl develop.yml reset
+
+(which additionally removes the PostgreSQL data volume).
+
 
 ### Working with setups
 
-Now we have an "empty" Ledger application. It would be very useful
+Now we have an "empty" Ledger application. For development puposes it
+is very useful
 to quickly "switch" to different scenarios (datasets + users).
 This can be achieved with _setups_.
 
 What you need is a folder for appropriate PostgreSQL dumps and a
-folder for setup configs (both somewhere "outside" of this project). Say (for example):
+folder for setup configs (both somewhere "outside" of this project). 
+Say (for example):
 
 * `~/projects/sql-ledger/ledgersetup/configs`
 * `~/projects/sql-ledger/ledgersetup/dumps`
 
-At first you have to configure these in your `~/.sql-ledger.local.env`:
+At first you have to configure these in your `~/.sql-ledger.env`:
 
 ```sh
 [...]
 LEDGERSETUP_CONFIG_PATH=~/projects/sql-ledger/ledgersetup/configs
-LEDGERSETUP_DUMP_PATH=~/projects/sql-ledger/ledgersetup/dumps
+LEDGERSETUP_DUMPS_PATH=~/projects/sql-ledger/ledgersetup/dumps
 [...]
 ```
 
-Restart the application (because these paths will be bind-mounted read-only into the web container:
+Restart the application (because these paths will be bind-mounted 
+read-only into the web container):
 
-    ./ledgerctl up
+    ./ledgerctl develop.yml up
 
 A setup config is written in YAML. We show this with an example,
 say `setup1.yml`:
@@ -120,18 +111,19 @@ users:
   - { name: gb, pass: gb, lang: gb }
 ```
 
-The `dumps` are relative paths in your `LEDGERSETUP_DUMP_PATH` folder.
+The `dumps` are relative paths in your `LEDGERSETUP_DUMPS_PATH` folder.
 
 Having that, you could run
 
-    ./ledgerctl setup setup1.yml
+    ./ledgerctl develop.yml setup setup1.yml
 
-After that, you can work with this setup. Besides, you can query the latest setup info via web interface at any time:
+After that, you can work with this setup. Besides, you can query the latest 
+setup info via web interface at any time:
 
     http://localhost:4293/ledgersetup/runinfo
 
 
-#### Configuration syntax
+#### Setup configuration syntax
 
 Aside from what you already have seen in the example above, you can use
 the following special patterns in dump paths:
@@ -140,3 +132,28 @@ the following special patterns in dump paths:
 * *One* use of the pattern `{{ latest_nonempty_dir() }}`
 * Use of the pattern `{{ build_time(%Y%m%d) }}` (or any other `strftime` expression)
 * Use of the pattern `{{ param(KEY) }}` (see `ledgersetup.pl --param KEY=VALUE`)
+
+
+## Staging builds
+
+The goal here is to get a SQL-Ledger container that has a fresh clone
+of a git branch in it. A suitable compose file  is `staging.yml`, and if you want
+to manage different instances (e.g. in a Jenkins CI environment),
+you must add a project name (here: `staging-test1`):
+
+
+    ./ledgerctl -p staging-test1 staging.yml up --build
+    ./ledgerctl -p staging-test1 staging.yml init
+
+This step if configurable with the following environment
+variables (see `staging.yml` for their default values):
+
+* `GIT_URL`
+* `GIT_BRANCH`
+* `LEDGER_POSTGRES_USER`
+* `LEDGER_PORT`
+* `LEDGERSETUP_CONFIG_PATH`
+* `LEDGERSETUP_DUMPS_PATH`
+
+If you want to test this in your development environment, please ensure that
+there are no conflicting values in your `.env` file!

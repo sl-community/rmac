@@ -1,0 +1,39 @@
+version: "3"
+
+services:
+  web:
+    image: local/rmac/web
+    build:
+      context: build/web
+      args:
+        USAGE: develop
+    environment:
+      LEDGER_UID: ${LEDGER_UID}
+      LEDGER_GID: ${LEDGER_GID}
+      LEDGER_POSTGRES_USER: ${LEDGER_POSTGRES_USER}
+    ports:
+      - ${LEDGER_PORT}:80
+    networks:
+      - private
+    volumes:
+      - ../..:/srv/www/sql-ledger
+      - ${LEDGERSETUP_CONFIG_PATH}:/ledgersetup/configs:ro
+      - ${LEDGERSETUP_DUMPS_PATH}:/ledgersetup/dumps:ro
+
+  db:
+    environment:
+      LEDGER_POSTGRES_USER: ${LEDGER_POSTGRES_USER}
+    image: local/rmac/db
+    build:
+      context: build/db
+    networks:
+      - private
+    volumes:
+      - data:/var/lib/postgresql/data
+
+
+volumes:
+  data:
+
+networks:
+  private:

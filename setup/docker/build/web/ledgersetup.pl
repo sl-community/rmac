@@ -10,17 +10,17 @@ use Time::Piece;
 use Getopt::Long;
 
 
-BEGIN { # give up root identity and run as an unprivileged user ASAP
+BEGIN { # give up root identity and run as www-data ASAP
 
    use POSIX;
   
-   my $run_as = $ENV{LEDGER_APACHE_RUN_USER};
 
-   my ($uid, $gid) = ( getpwnam $run_as )[ 2, 3 ];
+   my ($uid, $gid) = ( getpwnam "www-data" )[ 2, 3 ];
 
    die $! unless $uid && $gid;
 
-   if ( $> == 0 ) {
+   if ( $> == 0 ) { # we are root
+       
       POSIX::setgid( $gid ); # GID must be set before UID!
       POSIX::setuid( $uid );
    }
@@ -28,8 +28,7 @@ BEGIN { # give up root identity and run as an unprivileged user ASAP
    {
       warn <<__ABORT__ and exit 1;
 ** ABORT! **
-   This application only runs as the "$run_as" user,
-   not as your user account with ID: $>
+   This application can only be started as "root" or "www-data".
 __ABORT__
    }
 }
