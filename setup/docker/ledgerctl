@@ -3,23 +3,97 @@
 SCRIPT=$(realpath $0)
 cd $(dirname $SCRIPT)
 
+function usage() {
+    cat <<EOF 1>&2 
+Usage: $(basename $SCRIPT) [-p PROJECT_NAME] YAML_FILE... COMMAND [OPTIONS]
 
-COMPOSE="docker-compose -f web.local.yml -f db.local.yml"
+
+and COMMAND is one of:
+    build                    (re)build containers
+
+    up                       (re)create containers
+
+    down                     Bring everything down
+
+    logs                     Show logs
+
+    setup <CONFIG>           Perform setup
+
+    query <USERNAME> <YAML/KEY> [<BIND_PARAMS>...]
+                             SQL-query (see mojo/lib/SL/Model/SQL/resources)
+
+    bash web|db              Start a bash in web or db container
+
+    reset                    down + cleanup + rm volume
+EOF
+
+    exit 1
+}
+
+
+
+while getopts p: opt
+do
+    case $opt in
+	p) PROJECT_NAME=$OPTARG ;;
+	?) exit 1 ;;
+    esac
+done
+
+shift $((OPTIND-1))
+
+
+
+if test -z "$PROJECT_NAME"; then
+    PROJECT_NAME=sql-ledger_develop
+else
+    # Prepend "sql-ledger":
+    PROJECT_NAME=sql-ledger_$PROJECT_NAME
+fi
+
+
+
+YAMLS=
+for file in "$@"; do
+    SUFFIX=${file##*.}
+    if [ "$SUFFIX" = "yml" -o "$SUFFIX" = "yaml" ]; then   
+	YAMLS="${YAMLS}-f $file "
+	shift
+    else
+	break
+    fi
+done
+
+if test -z "$YAMLS"; then
+    echo "No compose YAML filename given" 1>&2
+    exit 1
+fi
+
+COMPOSE="docker-compose $YAMLS -p $PROJECT_NAME"
+
+if [ "$LEDGERCTL_SUDO_COMPOSE" = "true" ]; then
+    COMPOSE="sudo -E $COMPOSE"
+fi
+
+echo "*** Compose: $COMPOSE"
+echo "*** Action:  $@"
+
 
 case $1 in
+    build)
+	shift
+	$COMPOSE build "$@"
+	;;
     up)
-	$COMPOSE up -d --build --force-recreate
+	shift
+	$COMPOSE up -d --force-recreate "$@"
+	;;
+    init)
+	shift
+	$COMPOSE exec web ledgersetup.pl --initweb "$@"
 	;;
     down)
 	$COMPOSE down
-	;;
-    update)
-	for i in $(find . -name Dockerfile |xargs sed -rn 's/^FROM (.*)/\1/gp')
-	do
-	    docker pull $i
-	done
-
-	$SCRIPT up
 	;;
     logs)
 	shift
@@ -37,34 +111,12 @@ case $1 in
 	$COMPOSE exec $2 bash
 	;;
     reset)
-	$SCRIPT down
-	rm -rfv ../../{users,spool}
-	. .env
-	docker volume rm ${COMPOSE_PROJECT_NAME}_pg_data
+	$COMPOSE down
+	[ $PROJECT_NAME = sql-ledger_develop ] && rm -rfv ../../{users,spool}
+	docker volume rm ${PROJECT_NAME}_data
 	;;
     *)
-	cat <<EOF 1>&2 
-Usage: $0 COMMAND
-
-Where COMMAND is one of:
-    up                       (Re)build and (re)create containers
-
-    down                     Bring everything down
-
-    update                   Pull base images and rebuild
-
-    logs                     Show logs
-
-    setup <CONFIG>           Perform setup
-
-    query <USERNAME> <YAML/KEY> [<BIND_PARAMS>...]
-                             SQL-query (see mojo/lib/SL/Model/SQL/resources)
-
-    bash web|db              Start a bash in web or db container
-
-    reset                    down + cleanup + rm volume
-EOF
-
-	exit 1
+	usage
+	exit
 	;;
 esac

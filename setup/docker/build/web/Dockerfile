@@ -4,13 +4,7 @@
 
 #FROM debian:buster-slim
 
-
 FROM debian:stretch
-
-ARG LEDGER_DOCUMENT_ROOT
-ARG BUILD_WEB_PATH=.
-
-#RUN sed -ri 's/deb\.debian\.org/ftp.uni-kl.de/g' /etc/apt/sources.list
 
 RUN apt-get update  && \  
     apt-get install -y \
@@ -33,34 +27,26 @@ RUN apt-get update  && \
       postgresql-client \
       zip \
       bzip2 \
-      less
+      cpanminus \
+      less \
+      make \
+      git
 
-RUN apt-get install -y \
-    cpanminus \
-    make && \
-    cpanm DBIx::XHTML_Table
+RUN cpanm DBIx::XHTML_Table
 
-ARG LEDGER_APACHE_RUN_USER
-ARG LEDGER_APACHE_RUN_USERID
-ARG LEDGER_APACHE_RUN_GROUP
-ARG LEDGER_APACHE_RUN_GROUPID
 
-RUN if test "${LEDGER_APACHE_RUN_USER}" != "www-data"; then \
-      groupadd -g ${LEDGER_APACHE_RUN_GROUPID} ${LEDGER_APACHE_RUN_GROUP} && \
-      useradd  -u ${LEDGER_APACHE_RUN_USERID} -d /nonexistent -M -r \
-               -g ${LEDGER_APACHE_RUN_GROUP} \
-               -s /bin/false ${LEDGER_APACHE_RUN_USER}; \
-    else \
-      echo "APACHE_RUN_USER is www-data -- Nothing to do here"; \
-    fi
-    
+ARG LEDGER_DOCUMENT_ROOT=/srv/www/sql-ledger
+ENV LEDGER_DOCUMENT_ROOT=${LEDGER_DOCUMENT_ROOT}
 
-RUN install -d -o ${LEDGER_APACHE_RUN_USER} -g ${LEDGER_APACHE_RUN_GROUP} ${LEDGER_DOCUMENT_ROOT}
+ARG USAGE
+ARG GIT_URL
+ARG GIT_BRANCH
+
 
 ENV APACHE_RUN_DIR=/var/run/apache2 \
     APACHE_PID_FILE=/var/run/apache2/apache2.pid \
-    APACHE_RUN_USER=${LEDGER_APACHE_RUN_USER} \
-    APACHE_RUN_GROUP=${LEDGER_APACHE_RUN_GROUP} \
+    APACHE_RUN_USER=www-data \
+    APACHE_RUN_GROUP=www-data \
     APACHE_LOG_DIR=/var/log/apache2
 
 RUN a2enmod cgi rewrite && \
@@ -69,13 +55,24 @@ RUN a2enmod cgi rewrite && \
     rm -f /etc/apache2/sites-available/*
 
 
-COPY ${BUILD_WEB_PATH}/apache_sql-ledger.conf /etc/apache2/sites-available/sql-ledger.conf
-COPY ${BUILD_WEB_PATH}/ledger*.pl  /usr/local/bin/
+RUN if test ${USAGE} != "develop"; then \
+        git clone ${GIT_URL} -b ${GIT_BRANCH} ${LEDGER_DOCUMENT_ROOT}; \
+	cd ${LEDGER_DOCUMENT_ROOT}; \
+        rm -rf .git; \
+    	chown -R www-data:www-data .; \
+    fi
+	
 
-COPY --chown=www-data:www-data . ${LEDGER_DOCUMENT_ROOT}
 
-
+COPY ./apache_sql-ledger.conf /etc/apache2/sites-available/sql-ledger.conf
 RUN a2ensite sql-ledger
+
+COPY ./ledger*.pl  /usr/local/bin/
+
+
+COPY ./docker-entrypoint.sh /
+RUN chmod 755 /docker-entrypoint.sh
+
 
 RUN ln -sf /dev/stderr /var/log/apache2/access.log && \
     ln -sf /dev/stderr /var/log/apache2/error.log
@@ -83,11 +80,5 @@ RUN ln -sf /dev/stderr /var/log/apache2/access.log && \
 EXPOSE 80
 
 
-
-
-ENV LEDGER_DOCUMENT_ROOT=${LEDGER_DOCUMENT_ROOT} \
-    LEDGER_APACHE_RUN_USER=${LEDGER_APACHE_RUN_USER}
-
-
+ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["apache2", "-DFOREGROUND", "-CServerName localhost"]
-
