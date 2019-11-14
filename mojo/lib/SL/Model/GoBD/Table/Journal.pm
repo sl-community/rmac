@@ -28,6 +28,7 @@ sub init {
         { name => "Betrag_Haben",      type => "numeric(2)" },
 
         { name => "Kontonummer",       type => "numeric(0)" },
+        { name => "Kontenbezeichnung", type => "alpha" },
 
         { name => "Debitor-/Kreditornummer",    type => "numeric(0)" },
         { name => "Debitor-/Kreditorname",      type => "alpha" },
@@ -41,11 +42,13 @@ SELECT
 ac.trans_id,            -- Buchungsnummer
 'Debitor',              -- Buchungstyp
 ar.invnumber reference, -- Buchungreferenz
-c.description,          -- Buchungstext
+ar.description,         -- Buchungstext
 ac.transdate,           -- Buchungsdatum
 %s,
 %s,
 c.accno,                -- Kontonummer
+c.description,          -- Kontenbezeichnung
+
 ar.customer_id,         -- Debitor-/Kreditornummer
 vc.name                 -- Debitor-/Kreditorname
 FROM acc_trans ac
@@ -59,11 +62,12 @@ SELECT
 ac.trans_id,
 'Kreditor',
 ap.invnumber reference,
-c.description,
+ap.description,
 ac.transdate,
 %s,
 %s,
 c.accno,
+c.description,
 ap.vendor_id,
 vc.name
 FROM acc_trans ac
@@ -77,11 +81,12 @@ SELECT
 ac.trans_id,
 'Hauptbuch',
 gl.reference,
-c.description,
+gl.description,
 ac.transdate,
 %s,
 %s,
 c.accno,
+c.description,
 -1,
 'n.a.'
 FROM acc_trans ac
