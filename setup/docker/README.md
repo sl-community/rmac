@@ -136,10 +136,10 @@ the following special patterns in dump paths:
 
 ## Staging builds
 
-The goal here is to get a SQL-Ledger container that has a fresh clone
-of a git branch in it. A suitable compose file  is `staging.yml`, and if you want
+The goal here is to get a SQL-Ledger container that has a copy of the 
+sources in it. A suitable compose file  is `staging.yml`, and if you want
 to manage different instances (e.g. in a Jenkins CI environment),
-you must add a project name (here: `staging-test1`):
+you should add a project name (here: `staging-test1`):
 
 
     ./ledgerctl -p staging-test1 staging.yml up --build
@@ -148,8 +148,6 @@ you must add a project name (here: `staging-test1`):
 This step if configurable with the following environment
 variables (see `staging.yml` for their default values):
 
-* `GIT_URL`
-* `GIT_BRANCH`
 * `LEDGER_POSTGRES_USER`
 * `LEDGER_PORT`
 * `LEDGERSETUP_CONFIG_PATH`
