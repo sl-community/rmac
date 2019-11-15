@@ -4,11 +4,11 @@ services:
   web:
     image: local/rmac/web
     build:
-      context: build/web
+      context: ../..
+      dockerfile: setup/docker/build/web/Dockerfile
       args:
         USAGE: staging
-        GIT_URL: ${GIT_URL:-https://github.com/sl-community/rmac2.git}
-        GIT_BRANCH: ${GIT_BRANCH:-develop}
+        COPY_PREFIX: setup/docker/build/web
     environment:
       LEDGER_POSTGRES_USER: ${LEDGER_POSTGRES_USER:-sql-ledger}
     ports:

@@ -7,6 +7,7 @@ services:
       context: build/web
       args:
         USAGE: develop
+        COPY_PREFIX: .
     environment:
       LEDGER_UID: ${LEDGER_UID}
       LEDGER_GID: ${LEDGER_GID}
