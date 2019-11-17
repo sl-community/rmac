@@ -141,17 +141,20 @@ sources in it. A suitable compose file  is `staging.yml`, and if you want
 to manage different instances (e.g. in a Jenkins CI environment),
 you should add a project name (here: `staging-test1`):
 
+    ./ledgerctl -p staging-test1 staging.yml port.yml up --build
 
-    ./ledgerctl -p staging-test1 staging.yml up --build
-    ./ledgerctl -p staging-test1 staging.yml init
+Then the same with `init/setup/...`.
 
-This step if configurable with the following environment
-variables (see `staging.yml` for their default values):
+If you don't need a directly accesible port (e.g. in a reverse proxy setup),
+just omit the `port.yml`.
+
+This staging build is configurable with the following environment
+variables:
 
 * `LEDGER_POSTGRES_USER`
-* `LEDGER_PORT`
 * `LEDGERSETUP_CONFIG_PATH`
 * `LEDGERSETUP_DUMPS_PATH`
+* `LEDGER_PORT` (if needed)
 
 If you want to test this in your development environment, please ensure that
 there are no conflicting values in your `.env` file!
