@@ -92,7 +92,7 @@ case $1 in
 	;;
     init)
 	shift
-	$COMPOSE exec web ledgersetup.pl --initweb "$@"
+	$COMPOSE exec -T web ledgersetup.pl --initweb "$@"
 	;;
     down)
 	$COMPOSE down
@@ -103,7 +103,7 @@ case $1 in
 	;;
     setup)
 	shift
-	$COMPOSE exec web ledgersetup.pl --initweb --setup $1 "$@"
+	$COMPOSE exec -T web ledgersetup.pl --initweb --setup $1 "$@"
 	;;
     query)
 	shift
