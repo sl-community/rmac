@@ -13,6 +13,8 @@ and COMMAND is one of:
 
     up                       (re)create containers
 
+    init                     Initialize web container
+
     down                     Bring everything down
 
     logs                     Show logs

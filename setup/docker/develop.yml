@@ -15,7 +15,7 @@ services:
     ports:
       - ${LEDGER_PORT}:80
     networks:
-      - private
+      - backend
     volumes:
       - ../..:/srv/www/sql-ledger
       - ${LEDGERSETUP_CONFIG_PATH}:/ledgersetup/configs:ro
@@ -28,7 +28,7 @@ services:
     build:
       context: build/db
     networks:
-      - private
+      - backend
     volumes:
       - data:/var/lib/postgresql/data
 
@@ -37,4 +37,4 @@ volumes:
   data:
 
 networks:
-  private:
+  backend:

@@ -1,4 +1,4 @@
-version: "3"
+version: "3.5"
 
 services:
   web:
@@ -11,10 +11,8 @@ services:
         COPY_PREFIX: setup/docker/build/web
     environment:
       LEDGER_POSTGRES_USER: ${LEDGER_POSTGRES_USER:-sql-ledger}
-    ports:
-      - ${LEDGER_PORT:-4293}:80
     networks:
-      - private
+      - backend
     volumes:
       - ${LEDGERSETUP_CONFIG_PATH:-/tmp/ledgersetup/configs}:/ledgersetup/configs:ro
       - ${LEDGERSETUP_DUMPS_PATH:-/tmp/ledgersetup/dumps}:/ledgersetup/dumps:ro
@@ -26,7 +24,7 @@ services:
     build:
       context: build/db
     networks:
-      - private
+      - backend
     volumes:
       - data:/var/lib/postgresql/data
 
@@ -35,4 +33,4 @@ volumes:
   data:
 
 networks:
-  private:
+  backend:
