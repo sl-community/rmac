@@ -16,6 +16,7 @@ services:
     volumes:
       - ${LEDGERSETUP_CONFIG_PATH:-/tmp/ledgersetup/configs}:/ledgersetup/configs:ro
       - ${LEDGERSETUP_DUMPS_PATH:-/tmp/ledgersetup/dumps}:/ledgersetup/dumps:ro
+    restart: unless-stopped
 
   db:
     environment:
@@ -27,6 +28,7 @@ services:
       - backend
     volumes:
       - data:/var/lib/postgresql/data
+    restart: unless-stopped
 
 
 volumes:
