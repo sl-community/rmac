@@ -11,13 +11,14 @@
 % use SL::Model::Task;
 % my $task = SL::Model::Task->new(workdir => session('task_workdir'));
 
+<b><%= l 'Export log' %>:</b>
 <pre>
 <%= join("", $task->get_log_lines) %>
 </pre>
 
 
 % if (stash('refresh')) {
-<p><b><%= l 'Please be patient' %>...</b></p>
+<p><b>... <%= l 'Please be patient' %> ...</b></p>
 % }
 
 
@@ -33,9 +34,14 @@
 <hr size="3" noshade="" style="margin-bottom: 2em" />
 
 <p>
-  <span style="font-weight: bold"><%= l 'Archive filename' %>:</span>
-  <tt><%= $export->{archive_name} %></tt>
+  <span style="font-weight: bold"><%= l 'Exported period' %>:</span>&nbsp;
+  <tt><%= $export->{from} %></tt> ... <tt><%= $export->{to} %></tt>
 </p>
+
+%#<p>
+%#  <span style="font-weight: bold"><%= l 'Archive filename' %>:</span>
+%#  <tt><%= $export->{archive_name} %></tt>
+%#</p>
 
 <p>
   <span style="font-weight: bold">

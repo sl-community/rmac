@@ -25,8 +25,12 @@ sub start {
     );
     
     my $result = $sth->execute->fetch;
-    
-    $c->render("pvr/start", earliest_trans_year => $result->[0][0]);
+
+    my $year = $result->[0][0];
+    $c->session( earliest_trans_year => $year );
+
+    $c->render("pvr/start",
+               earliest_trans_year => $year);
 }
 
 
@@ -48,7 +52,11 @@ sub generate {
     my ($from_iso, $to_iso, $interval) = $c->foo;
 
     unless (defined($from_iso) && defined($to_iso)) {
-        $c->render("pvr/start", value_error => 1);
+        my $year =  $c->session('earliest_trans_year');
+        
+        $c->render("pvr/start",
+                   earliest_trans_year => $year,
+                   value_error => 1);
         return;
     }
 

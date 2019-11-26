@@ -26,12 +26,11 @@ sub new {
         { # remove stuff older than 5 minutes:
 
             my $cwd = pushd($args{basedir}) || die $!;
-            die "PROJECT_ROOT!!!" if -d "mojo";
+            die "PROJECT_ROOT!" if -d "mojo";
 
             foreach (glob "*") {
                 my ($mtime) = (stat)[9];
 
-                die "NOT AN EXPORT DIR" unless -e "$_/LOG";
                 remove_tree $_ if $mtime < time - 5*60;
             }   
         }

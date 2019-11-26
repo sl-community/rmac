@@ -10,7 +10,7 @@ use Mojo::Pg;
 use SL::Model::Task;
 
 use utf8;
-
+use Time::HiRes qw(gettimeofday tv_interval);
 
 sub new {
     my $class = shift;
@@ -62,12 +62,18 @@ sub data {
 
     my $placeholders = $self->{placeholders} // [];
 
+    my $t0 = [gettimeofday];
+
     my $data = $pg->db->query($self->{sql}, @$placeholders)->arrays;
 
-    
+    my $elapsed = tv_interval ( $t0, [gettimeofday] );
+
     my $num_records = @$data;
 
-    $self->{task}->log("Got $num_records record" . ($num_records == 1? "" : "s"));
+    $self->{task}->log(
+        "Got $num_records record" . ($num_records == 1? "" : "s") .
+            " in " . sprintf("%.1f", $elapsed) . " seconds"
+    );
 
     if ( $self->consistency_check($data) ) {
 

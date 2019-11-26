@@ -27,7 +27,7 @@ sub start {
     my $result = $sth->execute->fetch;
 
     my $year = $result->[0][0];
-    $c->session( gobd_earliest_trans_year => $year );
+    $c->session( earliest_trans_year => $year );
     
     $c->render("gobd/start",
                earliest_trans_year => $year);
@@ -45,7 +45,7 @@ sub generate {
     say STDERR "From: $from_iso, To: $to_iso";
 
     unless (defined($from_iso) && defined($to_iso)) {
-        my $year =  $c->session('gobd_earliest_trans_year');
+        my $year =  $c->session('earliest_trans_year');
 
         $c->render("gobd/start",
                    earliest_trans_year => $year,
