@@ -16,9 +16,9 @@ our %Lexicon = (
     
     # GoBD:
     'GoBD Export' => 'GoBD-Export',
-    'Export successful' => 'Export erfolgreich',
-    'Export failed'     => 'Export fehlgeschlagen',
-    'Show log'          => 'Protokoll anzeigen',
+    'Please be patient' => 'Bitte etwas Geduld',
+    'Export canceled due to serious problems'
+        => 'Wegen schwerwiegender Probleme wurde der Export abgebrochen', 
     'Archive filename'  => 'Archiv-Dateiname',
     'Contents'          => 'Inhalt',
     'Download ZIP file' => 'ZIP-Datei herunterladen',

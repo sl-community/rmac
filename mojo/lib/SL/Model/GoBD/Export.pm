@@ -21,7 +21,8 @@ use Text::CSV_XS;
 use Mojo::Pg;
 use utf8;
 
-use SL::Model::Log;
+use SL::Model::Task;
+
 
 sub new {
     my $class = shift;
@@ -29,34 +30,24 @@ sub new {
 
     my $self = {
         config      => $args{config},
+        workdir     => $args{workdir},
         from        => $args{from}, # ISO Format
         to          => $args{to},   # ISO Format
-        log         => SL::Model::Log->new(),
     };
 
-    $self->{workdir} = File::Spec->catfile(
-        $self->{config}->val('x_myspool'),
-        "_gobd"
-    );
-
-    # workdir is now something like /srv/www/sql-ledger/spool/john/_gobd.
-    # ensure that it exists and is empty:
-    make_path($self->{workdir});
-    remove_tree($self->{workdir}, {keep_root => 1} );
-    
+    # (workdir is now something like /srv/www/sql-ledger/spool/john/d3nc83N.)
     
     bless $self, $class;
 
     return $self;
 }        
 
-sub log { shift->{log} }
 
 
 sub create {
     my $self = shift;
 
-
+    
     my @tables = (
         'SL::Model::GoBD::Table::Firma',
         'SL::Model::GoBD::Table::Kontenplan',
@@ -70,10 +61,10 @@ sub create {
         load $class;
 
         push @{$self->{table_objects}}, $class->new(
-            config => $self->{config},
-            from   => $self->{from},
-            to     => $self->{to},
-            log    => $self->{log}
+            config  => $self->{config},
+            workdir => $self->{workdir},
+            from    => $self->{from},
+            to      => $self->{to},
         );
     }
 
@@ -90,12 +81,16 @@ sub create {
 sub create_table_files {
     my $self = shift;
 
+    my $task = SL::Model::Task->new(workdir => $self->{workdir});
+
+
     {
         my $dir = pushd($self->{workdir});
 
 
         foreach my $obj (@{$self->{table_objects}}) {
 
+            
             my $csv = Text::CSV_XS->new($obj->{csv_settings});
 
             my $csvfile;
@@ -115,6 +110,8 @@ sub create_table_files {
                 print $csvfile $csv->string();
             }
             close $csvfile;
+
+            break if $task->has_error;
         }
     }
 }
@@ -199,7 +196,7 @@ sub create_index_xml {
 
         if (my $msg = $@) {
             $msg =~ s/</&lt;/g;
-            $self->log->error("<pre>$msg</pre>");
+            #$self->log->error("<pre>$msg</pre>");
         }
 
         open(my $index, ">:crlf", "index.xml") || die $!;
@@ -240,7 +237,14 @@ sub create_zip {
     {
         my $dir = pushd($self->{workdir});
         
-        system('zip', '--quiet', '-r', $self->{archive_name}, '.');
+        system(
+            'zip',
+            '--quiet',
+            '-r',
+            '-x', 'LOG', '@',   # ( '@' terminates the list )
+            $self->{archive_name},
+            '.'
+        );
     }
     
     $self->{zipfile_path} = File::Spec->catfile(

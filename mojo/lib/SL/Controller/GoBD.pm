@@ -7,8 +7,11 @@ use SL::Model::Config;
 use SL::Model::GoBD::Export;
 use SL::Model::SQL::Statement;
 
+use SL::Model::Task;
+
 use File::Spec;
 use File::Basename;
+use Proc::Simple;
 use utf8;
 
 sub start {
@@ -22,8 +25,12 @@ sub start {
     );
     
     my $result = $sth->execute->fetch;
+
+    my $year = $result->[0][0];
+    $c->session( gobd_earliest_trans_year => $year );
     
-    $c->render("gobd/start", earliest_trans_year => $result->[0][0]);
+    $c->render("gobd/start",
+               earliest_trans_year => $year);
 }
 
 
@@ -35,31 +42,69 @@ sub generate {
     
     my ($from_iso, $to_iso) = $c->foo;
 
+    say STDERR "From: $from_iso, To: $to_iso";
+
     unless (defined($from_iso) && defined($to_iso)) {
-        $c->render("gobd/start", value_error => 1);
+        my $year =  $c->session('gobd_earliest_trans_year');
+
+        $c->render("gobd/start",
+                   earliest_trans_year => $year,
+                   value_error => 1);
         return;
     }
 
-    my $export = SL::Model::GoBD::Export->new(
-        config   => $conf,
-        from     => $from_iso,
-        to       => $to_iso,
-    );
+    my $task = SL::Model::Task->new(basedir => $conf->val('x_myspool'));
 
-    $export->create();
-    
-    $c->session(gobd_workdir      => $export->{workdir});
-    $c->session(gobd_zipfile_path => $export->{zipfile_path});
-    
-    $c->render("gobd/created", export => $export);
+    $c->session(task_workdir => $task->workdir);
+
+
+    my $proc = Proc::Simple->new();
+
+    $proc->start( sub {
+                      close(STDOUT);close(STDIN);close(STDERR);
+
+                      my $export = SL::Model::GoBD::Export->new(
+                          config   => $conf,
+                          workdir  => $task->workdir,
+                          from     => $from_iso,
+                          to       => $to_iso,
+                      );
+
+                      $export->create();
+
+                      $task->store(EXPORT_OBJ => $export);
+
+                      $task->finish;
+                  }
+              );
+
+    $c->redirect_to('gobd_poll');
 }
+
+
+sub poll {
+    my $c = shift;
+
+    my $task = SL::Model::Task->new(workdir => $c->session('task_workdir'));
+
+    if ($task->has_finished) {
+        my $export = eval { $task->retrieve('EXPORT_OBJ') };
+        
+        $c->render("gobd/created", export => $export);
+    }
+    else {
+        $c->render("gobd/created", export => undef, refresh => 2);
+    }
+}
+
+
 
 
 
 sub show {
     my $c = shift;
 
-    my $workdir = $c->session('gobd_workdir');
+    my $workdir = $c->session('task_workdir');
 
     my $path = Mojo::File->new(
         File::Spec->catfile($workdir, $c->param('filename'))
@@ -73,9 +118,12 @@ sub show {
 sub download {
     my $c = shift;
 
-    my $workdir = $c->session('gobd_workdir');
-    my $zipfile_dir  =  dirname($c->session('gobd_zipfile_path'));
-    my $zipfile_name = basename($c->session('gobd_zipfile_path'));
+    my $task = SL::Model::Task->new(workdir => $c->session('task_workdir'));
+    
+    my $export = $task->retrieve('EXPORT_OBJ');
+    
+    my $zipfile_dir  =  dirname($export->{zipfile_path});
+    my $zipfile_name = basename($export->{zipfile_path});
 
     my $static = Mojolicious::Static->new( paths => [ $zipfile_dir ] );
 

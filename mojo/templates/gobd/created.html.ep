@@ -1,39 +1,36 @@
 % layout 'default';
 % title l 'GoBD-Export';
 % languages userconfig->val('x_language');
+% use SL::Model::GoBD::Table::Firma;
+% use SL::Model::GoBD::Table::Kontenplan;
+% use SL::Model::GoBD::Table::Journal;
+% use SL::Model::GoBD::Table::SummenSalden;
 
-<script>
-$(document).ready(function() {
-    $('#toggle_log').click(function() {
-        $('#log').toggle(250);
-    });
-});
-</script>
+<h1 class='listtop'><%= l 'GoBD Export' %></h1>
 
-<h1 class='listtop'><%= l 'GoBD Export'%></h1>
+% use SL::Model::Task;
+% my $task = SL::Model::Task->new(workdir => session('task_workdir'));
 
-<p>
-  % if ($export->log->maxlevel >= 4) {
-  <span style="background: #F0A0A0; font-weight: bold">
-    <%= l 'Export failed' %>.</span>
-  % }
-  % elsif ($export->log->maxlevel == 3) {
-  <span style="background: yellow; font-weight: bold">
-    <%= l 'Export successful' %>.</span>
-  % }
-  % else {
-  <span style="background: #90EE90; font-weight: bold">
-    <%= l 'Export successful' %>.</span>
-    % }
-    
-  (<a id='toggle_log' href="#"><%= l "Show log" %></a>)
-</p>
-
-<%== $export->log->to_html("trace") %>
+<pre>
+<%= join("", $task->get_log_lines) %>
+</pre>
 
 
-% if ($export->log->maxlevel >= 4) { next }
+% if (stash('refresh')) {
+<p><b><%= l 'Please be patient' %>...</b></p>
+% }
 
+
+% if (!stash('refresh') && $task->has_error) {
+<p><b><%= l 'Export canceled due to serious problems' %>.</b></p>
+% }
+
+
+
+% if (!stash('refresh') && !$task->has_error) {
+
+
+<hr size="3" noshade="" style="margin-bottom: 2em" />
 
 <p>
   <span style="font-weight: bold"><%= l 'Archive filename' %>:</span>
@@ -62,3 +59,5 @@ $(document).ready(function() {
 %= submit_button l("Download ZIP file"), name => 'download', class => 'submit'
 
 % end
+
+% }
