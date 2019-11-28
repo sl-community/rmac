@@ -7,6 +7,12 @@
     %= stylesheet '/css/legacy/' . userconfig->val('stylesheet')
     %= javascript '/js/jquery.min.js'
 
+    % my $refresh = stash('refresh');
+
+    % if ($refresh) {
+    <meta http-equiv="refresh" content="<%= $refresh %>">
+    % }
+    
     <style>
       td .radio { vertical-align: middle; margin: 0 }
       

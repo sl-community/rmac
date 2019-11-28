@@ -64,6 +64,7 @@ sub startup {
 
     $auth->any('/gobd/start')          ->to('GoBD#start');
     $auth->any('/gobd/generate')       ->to('GoBD#generate');
+    $auth->any('/gobd/poll')           ->to('GoBD#poll')->name('gobd_poll');
     $auth->get('/gobd/show/#filename') ->to('GoBD#show');
     $auth->get('/gobd/download')       ->to('GoBD#download');
 

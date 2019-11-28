@@ -7,8 +7,10 @@ use feature ':5.10';
 use XML::LibXML;
 use Mojo::Pg;
 
-use utf8;
+use SL::Model::Task;
 
+use utf8;
+use Time::HiRes qw(gettimeofday tv_interval);
 
 sub new {
     my $class = shift;
@@ -24,6 +26,7 @@ sub new {
             escape_char => "\x{22}",        # "
         },
     };
+    $self->{task} = SL::Model::Task->new(workdir => $self->{workdir});
     
     bless $self, $class;
 
@@ -32,7 +35,6 @@ sub new {
     return $self;
 }
 
-sub log { shift->{log} }
 
 sub name {
     shift->{name};
@@ -56,25 +58,31 @@ sub data {
 
     my $pg = Mojo::Pg->new($self->{config}->val('x_pg_connstr'));
 
-    $self->log->info("Starting export: " . $self->name);
-
-    # if (ref $self eq 'SL::Model::GoBD::Table::SummenSalden') {
-    #     $self->log->trace(split(/\n/, $self->{sql}));
-    # }
+    $self->{task}->log("Starting export: " . $self->name);
 
     my $placeholders = $self->{placeholders} // [];
-    
+
+    my $t0 = [gettimeofday];
 
     my $data = $pg->db->query($self->{sql}, @$placeholders)->arrays;
 
-    
+    my $elapsed = tv_interval ( $t0, [gettimeofday] );
+
     my $num_records = @$data;
 
-    $self->log->info("Got $num_records record" . ($num_records == 1? "" : "s"));
+    $self->{task}->log(
+        "Got $num_records record" . ($num_records == 1? "" : "s") .
+            " in " . sprintf("%.1f", $elapsed) . " seconds"
+    );
 
-    $self->consistency_check($data);
+    if ( $self->consistency_check($data) ) {
 
-    return $data;
+        return $data;
+    }
+    else {
+        $self->{task}->finish();
+        return [];
+    }
 }
 
 
@@ -86,10 +94,8 @@ sub consistency_check {
 
     # 1. Do we have columns at all?
     unless (@$data) {
-        $self->log->error(
-            "No records selected"
-        );
-        return;
+        $self->{task}->error("No records selected");
+        return 0;
     }
     
     # 2. Number of columns ok?
@@ -97,22 +103,20 @@ sub consistency_check {
     my $got_columns  = @{$data->[0]};
 
     if ($need_columns != $got_columns) {
-        $self->log->error(
-            "Number of columns mismatch: Need $need_columns, got $got_columns"
-        );
-        return;
+        $self->{task}->error("Number of columns mismatch: Need $need_columns, got $got_columns");
+        return 0;
     }
 
     # 3. Any NULLs?
     foreach my $row (@$data) {
         if (grep { !defined } @$row) {
             my @with_nulls = map { defined $_? $_ : 'NULL' } @$row;
-            $self->log->error(
-                "Record contains NULLs: ", join('|', @with_nulls)
-            );
-            return;
+            $self->{task}->error("Record contains NULLs: " . join('|', @with_nulls));
+            return 0;
         }
     }
+
+    return 1;
 }
 
 

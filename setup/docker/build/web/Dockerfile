@@ -17,6 +17,7 @@ RUN apt-get update  && \
       libfile-pushd-perl \
       libfile-type-perl \
       libtext-csv-xs-perl \
+      libproc-simple-perl \
       libopenoffice-oodoc-perl \
       libyaml-perl \
       libyaml-tiny-perl \
