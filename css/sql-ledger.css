@@ -83,7 +83,8 @@ body.admin {
 }
 
 table.login td.login a img, center a img {
-    display: none;
+    /* In rmac we want the nice image; therefore: display it! */
+    /* display: none; */
 }
 
 .company_logo_envelop {
