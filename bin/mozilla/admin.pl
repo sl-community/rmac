@@ -20,7 +20,7 @@ use SL::User;
 
 $form = new Form;
 my $form_method = 'post';
-#my $form_method = 'get'; # For testing purposes; to see generated URLs
+#my $form_method = 'get'; # For testing purposes; to see produced URLs
 
 $locale = new Locale $language, "admin";
 $form->{charset} = $locale->{charset};

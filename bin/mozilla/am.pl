@@ -2239,6 +2239,7 @@ sub defaults {
   $checked{accrual} = "checked" if $form->{method} ne 'cash';
   $checked{cdt} = "checked" if $form->{cdt};
   $checked{linetax} = "checked" if $form->{linetax};
+  $checked{gldepartment} = "checked" if $form->{gldepartment};
   $checked{name} = "checked";
   if ($form->{namesbynumber}) {
     $checked{name} = "";
@@ -2328,6 +2329,10 @@ sub defaults {
 	<tr>
 	  <th align=right>|.$locale->text('Line Tax').qq|</th>
 	  <td><input name=linetax class=checkbox type=checkbox value="1" $checked{linetax}>&nbsp;|.$locale->text('Yes').qq|</td>
+	</tr>
+	<tr>
+	  <th align=right>|.$locale->text('Mandatory department in GL').qq|</th>
+	  <td><input name=gldepartment class=checkbox type=checkbox value="1" $checked{gldepartment}>&nbsp;|.$locale->text('Yes').qq|</td>
 	</tr>
 	<tr>
 	  <th align=right>|.$locale->text('Sort Names by').qq|</th>
@@ -2455,7 +2460,7 @@ sub defaults {
 </table>
 |;
 
-  $form->{optional} = "companyemail companywebsite company address address1 address2 city state zip country tel fax yearend weightunit businessnumber closedto revtrans audittrail method cdt linetax namesbynumber typeofcontact";
+  $form->{optional} = "companyemail companywebsite company address address1 address2 city state zip country tel fax yearend weightunit businessnumber closedto revtrans audittrail method cdt linetax gldepartment namesbynumber typeofcontact";
   
   $form->hide_form(qw(optional closedto revtrans audittrail path login));
 
@@ -3269,13 +3274,11 @@ sub company_logo {
 </pre>
 <div class="mainpage">
 <center>
-<a class="mainpageref" href="http://www.sql-ledger-network.com" target="_blank"><img src=$images/sql-ledger.gif border=0></a>
+<a class="mainpageref" href="http://www.runmyaccounts.com" target="_blank"><img src=$images/sql-ledger.gif border=0></a>
 <h1 class=login>|.$locale->text('Version').qq| $release</h1>
-<!--
 <p>
 <a class="roadmapref" href="$roadmap" target="_blank">roadmap</a>
 </p>
--->
 <br/>
 <h1 class=login>
 $form->{company}
