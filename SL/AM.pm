@@ -1412,7 +1412,7 @@ sub save_defaults {
   $query = qq|INSERT INTO defaults (fldname, fldvalue)
               VALUES (?, ?)|;
   $sth = $dbh->prepare($query) || $form->dberror($query);
-  
+
   $delquery = qq|DELETE FROM defaults WHERE fldname = ?|;
   $delsth = $dbh->prepare($delquery) || $form->dberror($delquery);
 
@@ -1423,7 +1423,7 @@ sub save_defaults {
 
   for (qw(inventory income expense fxgain fxloss)) {
     $delsth->execute(${_} . '_accno_id') || $form->dberror;
-  
+
     $query = qq|INSERT INTO defaults (fldname, fldvalue)
                 VALUES ('${_}_accno_id', (SELECT id
 		                FROM chart
@@ -1433,7 +1433,7 @@ sub save_defaults {
 
   for (qw(transitionaccount selectedaccount glnumber sinumber vinumber batchnumber vouchernumber sonumber ponumber sqnumber rfqnumber partnumber employeenumber customernumber vendornumber projectnumber precision)) {
     $delsth->execute($_) || $form->dberror;
-    
+
     $sth->execute($_, $form->{$_}) || $form->dberror;
     $sth->finish;
   }
@@ -1639,7 +1639,7 @@ sub backup {
         binmode( OUT, ':raw' );
 
         print OUT qq|Content-Type: application/file;\n| . qq|Content-Disposition: attachment; filename="$myconfig->{dbname}-$t[5]-$t[4]-$t[3].sql.gz"\n\n|;
-        print OUT qx(PGPASSWORD="$myconfig->{dbpasswd}" /usr/bin/pg_dump -U $myconfig->{dbuser} $myconfig->{dbname} | gzip -c );
+        print OUT qx(PGPASSWORD="$myconfig->{dbpasswd}" /usr/bin/pg_dump -C -U $myconfig->{dbuser} $myconfig->{dbname} | gzip -c );
     }
     unlink "$tmpfile";
 }
@@ -1812,12 +1812,21 @@ sub post_yearend {
 
   $form->{reference} = $form->update_defaults($myconfig, 'glnumber', $dbh) unless $form->{reference};
 
+  my ($null, $department_id) = split(/--/, $form->{department});
+  $department_id *= 1;
+
+  if ($department_id){
+    $query = qq|INSERT INTO dpt_trans (trans_id, department_id) VALUES ($form->{id}, $department_id)|;
+    $dbh->do($query) || $form->dberror($query);
+  }
+
+    # if there is an amount, add the record
   $query = qq|UPDATE gl SET
 	      reference = |.$dbh->quote($form->{reference}).qq|,
 	      description = |.$dbh->quote($form->{description}).qq|,
 	      notes = |.$dbh->quote($form->{notes}).qq|,
 	      transdate = '$form->{transdate}',
-	      department_id = 0
+	      department_id = $department_id
 	      WHERE id = $form->{id}|;
 
   $dbh->do($query) || $form->dberror($query);
@@ -1837,7 +1846,6 @@ sub post_yearend {
     if ($form->{"debit_$i"}) {
       $amount = $form->{"debit_$i"} * -1;
     }
-
 
     # if there is an amount, add the record
     if ($amount) {
@@ -1896,6 +1904,7 @@ sub bank_accounts {
 
   my $query = qq|SELECT c.id, c.accno, c.description,
                  bk.name, bk.iban, bk.bic, bk.membernumber, bk.dcn, bk.rvc,
+                 bk.qriban, bk.strdbkginf, bk.invdescriptionqr,
 		 ad.address1, ad.address2, ad.city,
                  ad.state, ad.zipcode, ad.country,
 		 l.description AS translation
@@ -1939,6 +1948,7 @@ sub get_bank {
 
   $query = qq|SELECT c.accno, c.description,
               bk.name, bk.iban, bk.bic, bk.membernumber, bk.dcn, bk.rvc,
+              bk.qriban, bk.strdbkginf, bk.invdescriptionqr,
 	      ad.address1, ad.address2, ad.city,
               ad.state, ad.zipcode, ad.country,
 	      l.description AS translation
@@ -1974,13 +1984,12 @@ sub save_bank {
   my ($id) = $dbh->selectrow_array($query);
 
   my $ok;
-  for (qw(name iban bic address1 address2 city state zipcode country membernumber rvc dcn)) {
+  for (qw(name iban bic address1 address2 city state zipcode country membernumber rvc dcn qriban strdbkginf invdescriptionqr)) {
     if ($form->{$_}) {
       $ok = 1;
       last;
     }
   }
-
   if ($ok) {
     if ($id) {
       $query = qq|UPDATE bank SET
@@ -1989,18 +1998,24 @@ sub save_bank {
 		  bic = |.$dbh->quote(uc $form->{bic}).qq|,
 		  membernumber = |.$dbh->quote($form->{membernumber}).qq|,
 		  rvc = |.$dbh->quote($form->{rvc}).qq|,
+		  qriban = |.$dbh->quote($form->{qriban}).qq|,
+		  strdbkginf = |.$dbh->quote($form->{strdbkginf}).qq|,
+		  invdescriptionqr = |.$dbh->quote($form->{invdescriptionqr}).qq|,
 		  dcn = |.$dbh->quote($form->{dcn}).qq|
 		  WHERE id = $form->{id}|;
       $dbh->do($query) || $form->dberror($query);
     } else {
-      $query = qq|INSERT INTO bank (id, name, iban, bic, membernumber, rvc, dcn)
+      $query = qq|INSERT INTO bank (id, name, iban, bic, membernumber, rvc, dcn, qriban, strdbkginf, invdescriptionqr)
 		  VALUES ($form->{id}, |
 		  .$dbh->quote(uc $form->{name}).qq|, |
 		  .$dbh->quote(uc $form->{iban}).qq|, |
 		  .$dbh->quote($form->{bic}).qq|, |
 		  .$dbh->quote($form->{membernumber}).qq|, |
 		  .$dbh->quote($form->{rvc}).qq|, |
-		  .$dbh->quote($form->{dcn}).qq|
+		  .$dbh->quote($form->{dcn}).qq|, |
+		  .$dbh->quote($form->{qriban}).qq|, |
+		  .$dbh->quote($form->{strdbkginf}).qq|, |
+		  .$dbh->quote($form->{invdescriptionqr}).qq|
 		  )|;
       $dbh->do($query) || $form->dberror($query);
 

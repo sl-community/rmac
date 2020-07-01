@@ -92,7 +92,7 @@ sub new {
 	$self->{menubar} = 1 if $self->{path} =~ /lynx/i;
 
 	$self->{version}   = "2.8.33";
-	$self->{dbversion} = "2.8.17";
+	$self->{dbversion} = "2.8.18";
 
 	bless $self, $type;
 
@@ -106,7 +106,7 @@ sub logtofile {
 }
 
 sub debug {
-	my ( $self, $file ) = @_;
+	my ( $self, $file, $vars ) = @_;
 
 	if ($file) {
 		open( FH, "> $file" ) or die $!;
@@ -118,10 +118,13 @@ sub debug {
 			&header unless $self->{header};
 			print "<pre>";
 		}
-		for ( sort keys %$self ) { print "$_ = $self->{$_}\n" }
+        if ($vars){
+		   for ( sort @$vars ) { print "$_ = $self->{$_}\n" }
+        } else {
+		   for ( sort keys %$self ) { print "$_ = $self->{$_}\n" }
+        }
 		print "</pre>" if $ENV{HTTP_USER_AGENT};
 	}
-
 }
 
 # Dump hash values for debugging
@@ -667,7 +670,7 @@ sub round_amount {
 }
 
 sub parse_template {
-	my ( $self, $myconfig, $userspath, $debuglatex ) = @_;
+	my ( $self, $myconfig, $userspath, $debuglatex, $noreply ) = @_;
 
 	my ( $chars_per_line, $lines_on_first_page, $lines_on_second_page ) =
 	  ( 0, 0, 0 );
@@ -680,6 +683,9 @@ sub parse_template {
 
 	# Setup variables from defaults table
 	my $dbh = $self->dbconnect($myconfig);
+	my ($noreplyemail) = $dbh->selectrow_array("SELECT fldvalue FROM defaults WHERE fldname='noreplyemail'");
+	my ($utf8templates) = $dbh->selectrow_array("SELECT fldvalue FROM defaults WHERE fldname='utf8templates'");
+
 	my $query =
 	  "SELECT fldname, fldvalue FROM defaults WHERE fldname LIKE 'latex'";
 	my $sth = $dbh->prepare($query);
@@ -1015,6 +1021,11 @@ sub parse_template {
 
 		$self->{tmpfile} =~ s/$userspath\///g;
 
+        if ($utf8templates){
+           system("mv $self->{tmpfile} LATIN-$self->{tmpfile}");
+           system("iconv -f ISO-8859-1 -t UTF8 LATIN-$self->{tmpfile} -o $self->{tmpfile}");
+        }
+
 		$self->{errfile} = $self->{tmpfile};
 		$self->{errfile} =~ s/tex$/err/;
 
@@ -1065,8 +1076,10 @@ sub parse_template {
 			for (qw(cc bcc subject message version format charset notify)) {
 				$mail->{$_} = $self->{$_};
 			}
-			$mail->{to}     = qq|$self->{email}|;
-			$mail->{from}   = qq|"$myconfig->{name}" <$myconfig->{email}>|;
+            $noreply              = $myconfig->{email} if !$noreplyemail; # armaghan 2020-03-31 do not use noreply email if not enabled in defaults
+			$mail->{to}           = qq|$self->{email}|;
+			$mail->{from}         = qq|"$myconfig->{name}" <$noreply>|;
+			$mail->{'reply-to'}   = qq|"$myconfig->{name}" <$myconfig->{email}>|;
 			$mail->{fileid} = "$fileid.";
 
 			# if we send html or plain text inline
@@ -1603,6 +1616,7 @@ sub cleanup {
 			$self->{tmpfile} =~ s/\.\w+$//g;
 			my $tmpfile = $self->{tmpfile};
 			unlink(<$tmpfile.*>);
+			unlink(<"LATIN-$tmpfile.tex">);
 		}
 
 		chdir("$self->{cwd}");
@@ -2727,7 +2741,7 @@ sub create_links {
 
 	my %defaults =
 	  $self->get_defaults( $dbh,
-		\@{ [qw(closedto revtrans weightunit cdt precision)] } );
+		\@{ [qw(closedto revtrans weightunit cdt precision showtaxper)] } );
 	for ( keys %defaults ) { $self->{$_} = $defaults{$_} }
     $self->closedto_user($myconfig, $dbh);
 

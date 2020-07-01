@@ -147,6 +147,7 @@ sub post_transaction {
 
   my %defaults = $form->get_defaults($dbh, \@{['precision', 'extendedlog']});
   $form->{precision} = $defaults{precision};
+  $form->{precision} = 8; # Override to fix fx calculations rounding error.
 
   if ($form->{id} *= 1 and $defaults{extendedlog}) {
         $query = qq|INSERT INTO gl_log SELECT * FROM gl WHERE id = $form->{id}|;
@@ -873,7 +874,6 @@ sub transactions {
 		 ad.zipcode, ad.country, c.description AS accdescription,
 		 a.intnotes, a.curr, a.exchangerate, '*' log, ac.ts, ac.entry_id, ac.fx_transaction,
          ac.tax, ac.taxamount, ac.id payment_id
-		 a.intnotes, a.curr, a.exchangerate, '*' log, ac.ts, ac.entry_id,
 		 FROM ar_log_deleted a
 		 JOIN acc_trans_log_deleted ac ON (a.id = ac.trans_id)
 		 $invoicejoin

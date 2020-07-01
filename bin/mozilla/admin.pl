@@ -12,7 +12,8 @@
 #
 #======================================================================
 
-$menufile = "menu.ini";
+#$menufile is not configured in sql-ledger.conf
+#$menufile = "menu.ini";
 
 use SL::Form;
 use SL::User;
@@ -21,6 +22,7 @@ use SL::User;
 $form = new Form;
 my $form_method = 'post';
 #my $form_method = 'get'; # For testing purposes; to see generated URLs
+
 
 $locale = new Locale $language, "admin";
 $form->{charset} = $locale->{charset};
@@ -95,7 +97,7 @@ function sf(){
 <a href="http://www.sql-ledger.org"><img src=$images/sql-ledger.gif border=0 target="_blank"></a>
 <h1 class=login>|.$locale->text('Version').qq| $form->{version}<p>|.$locale->text('Administration').qq|</h1>
 
-<form method="$form_method" action="$form->{script}">
+<form method=post action="$form->{script}">
 
 <table>
   <tr>
@@ -291,7 +293,7 @@ sub list_users {
   print qq|
 <body class=admin>
 
-<form method="$form_method" action=$form->{script}>
+<form method=post action=$form->{script}>
 
 <table width=100%>
   <tr>
@@ -355,8 +357,8 @@ $dbdrivers
 $nologin
 $software
 
-<input type=submit class=submit name=action value="|.$locale->text('Logout').qq|">|
-    .qq|
+<input type=submit class=submit name=action value="|.$locale->text('Logout').qq|">
+
 </form>
 
 |.$locale->text('Click on login name to edit!').qq|
@@ -469,7 +471,7 @@ sub form_header {
   print qq|
 <body class=admin>
 
-<form method="post" action=$form->{script}>
+<form method=post action=$form->{script}>
 
 <table width=100%>
   <tr class=listheading><th colspan=2>$form->{title}</th></tr>
@@ -760,13 +762,12 @@ sub save {
  
   # no spaces or strange characters allowed in login name
   $form->error($locale->text('No space allowed for login!')) if $form->{login} =~ / /;
-    if ($form->{login} =~ /\W/) {
+  if ($form->{login} =~ /\W/) {
     $login = $form->{login};
     $login =~ s/\@//;
- 
-#    $form->error($locale->text('login may only contain alphanumeric characters!')) if $login =~ /\W/;
+    
+    $form->error($locale->text('login may only contain alphanumeric characters!')) if $login =~ /\W/;
   }
-
   
   # check for duplicates
   if (!$form->{edit}) {
@@ -1003,7 +1004,7 @@ sub change_admin_password {
   print qq|
 <body class=admin>
 
-<form method="$form_method" action=$form->{script}>
+<form method=post action=$form->{script}>
 
 <table>
   <tr>
@@ -1212,7 +1213,7 @@ sub dbselect_source {
 <center>
 <h2>$form->{title}</h2>
 
-<form method="$form_method" action=$form->{script}>
+<form method=post action=$form->{script}>
 
 <table>
   <tr>
@@ -1256,6 +1257,7 @@ sub dbselect_source {
 <input type=submit class=submit name=action value="|.$locale->text('Create Dataset').qq|">
 <input type=submit class=submit name=action value="|.$locale->text('Update Dataset').qq|">
 <input type=submit class=submit name=action value="|.$locale->text('Delete Dataset').qq|">
+
 |
     . mojo_admin_button("Backup/Restore", "/admin/backup_restore/start")
     . qq|
@@ -1313,7 +1315,7 @@ sub update_dataset {
 
     print qq|
 <table width=100%>
-<form method="$form_method" action=$form->{script}>
+<form method=post action=$form->{script}>
 |;
 
     $form->{callback} = "$form->{script}?action=list_users&path=$form->{path}";
@@ -1428,7 +1430,7 @@ sub create_dataset {
 <center>
 <h2>$form->{title}</h2>
 
-<form method="$form_method" action=$form->{script}>
+<form method=post action=$form->{script}>
 
 <table width=100%>
   <tr class=listheading>
@@ -1467,7 +1469,7 @@ sub create_dataset {
   <tr>
 
     <th align=right nowrap>LC_CTYPE/LC_COLLATE</th>
-    <td><select name=ctype><option value="" selected="selected"></option></select></td>
+    <td><select name=ctype><option value="de_CH.ISO-8859-1" selected="selected">de_CH.ISO-8859-1</option></select></td>
 
   </tr>
 |;
@@ -1546,7 +1548,7 @@ sub dbcreate {
 <center>
 <h2>$form->{title}</h2>
 
-<form method="$form_method" action=$form->{script}>|
+<form method=post action=$form->{script}>|
 
 .$locale->text('Dataset')." $form->{db} ".$locale->text('successfully created!')
 
@@ -1587,7 +1589,7 @@ sub delete_dataset {
 
 <h2>$form->{title}</h2>
 
-<form method="$form_method" action=$form->{script}>
+<form method=post action=$form->{script}>
 
 <table width=100%>
   <tr class=listheading>
@@ -1652,7 +1654,7 @@ sub dbdelete {
 <center>
 <h2>$form->{title}</h2>
 
-<form method="$form_method" action=$form->{script}>
+<form method=post action=$form->{script}>
 
 $form->{db} |.$locale->text('successfully deleted!')
 
@@ -1714,7 +1716,7 @@ $msg
 <center>
 <h2>$form->{title}</h2>
 
-<form method="$form_method" action="$script">
+<form method="post" action="$script">
 <input type="hidden" name="path" value="$form->{path}">
 <input type="hidden" name="callback" value="$script?action=list_users&path=$form->{path}">
 <table>
@@ -1772,7 +1774,7 @@ sub update_software {
   print qq|
 <pre>
 
-<form method="$form_method" action="$script">
+<form action="$script">
 <input type="hidden" name="path" value="$form->{path}">
 <input type="hidden" name="nextsub" value="software_administration">
 <input type="submit" class="submit" name="action" value="|.$locale->text('Continue').qq|">
