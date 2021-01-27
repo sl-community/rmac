@@ -1074,10 +1074,13 @@ sub get_accounts {
   # remove accounts with zero balance
   foreach $category (@{ $categories }) {
     foreach $accno (keys %{ $form->{$category} }) {
-      $form->{$category}{$accno}{last} = $form->round_amount($form->{$category}{$accno}{last}, $form->{decimalplaces});
-      $form->{$category}{$accno}{this} = $form->round_amount($form->{$category}{$accno}{this}, $form->{decimalplaces});
+      # armaghan 17 aug 2020 forced 8 precision in rounding to avoid rounding errors in calculating income
+      #$form->{$category}{$accno}{last} = $form->round_amount($form->{$category}{$accno}{last}, $form->{decimalplaces});
+      #$form->{$category}{$accno}{this} = $form->round_amount($form->{$category}{$accno}{this}, $form->{decimalplaces});
+      $form->{$category}{$accno}{last} = $form->round_amount($form->{$category}{$accno}{last}, 8);
+      $form->{$category}{$accno}{this} = $form->round_amount($form->{$category}{$accno}{this}, 8);
 
-      delete $form->{$category}{$accno} if ($form->{$category}{$accno}{this} == 0 && $form->{$category}{$accno}{last} == 0);
+      delete $form->{$category}{$accno} if ($form->round_amount($form->{$category}{$accno}{this},2) == 0 && $form->round_amount($form->{$category}{$accno}{last},2) == 0);
     }
   }
 

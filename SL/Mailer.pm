@@ -14,12 +14,108 @@
 package Mailer;
 
 use POSIX;
+use JSON::XS;
+use MIME::Base64 ('encode_base64');
+use File::Slurper ('read_binary');
+use Text::Markdown;
 
 sub new {
   my ($type) = @_;
   my $self = {};
 
   bless $self, $type;
+}
+
+sub apisend {
+  my ($self) = @_;
+
+  $self->{contenttype} = "text/plain" unless $self->{contenttype};
+
+  for (qw(from to replyto cc bcc)) {
+    $self->{$_} =~ s/\&lt;/</g;
+    $self->{$_} =~ s/\&gt;/>/g;
+    $self->{$_} =~ s/(\/|\\|\$)//g;
+  }
+
+  my $json = JSON::XS->new;
+  my $data = {};
+
+  $data->{sender}->{name} = $self->{fromname};
+  $data->{sender}->{email} = $self->{from};
+
+  if ($self->{replyto}){
+     $data->{replyTo}->{name} = $self->{fromname};
+     $data->{replyTo}->{email} = $self->{replyto};
+  }
+
+  $data->{to}->[0]->{name} = $self->{to};
+  $data->{to}->[0]->{email} = $self->{to};
+
+  if ($self->{cc}){
+     $self->{cc} =~ tr/ //ds;
+     @cc = split /,/, $self->{cc};
+     my $i = 0;
+     for (@cc){
+        $data->{cc}->[$i]->{name} = $_;
+        $data->{cc}->[$i]->{email} = $_;
+        $i++;
+     }
+  }
+  if ($self->{bcc}){
+     $self->{bcc} =~ tr/ //ds;
+     @bcc = split /,/, $self->{bcc};
+     my $i = 0;
+     for (@bcc){
+        $data->{bcc}->[$i]->{name} = $_;
+        $data->{bcc}->[$i]->{email} = $_;
+        $i++;
+     }
+  }
+
+  if (@{$self->{attachments}}) {
+      my $i = 0;
+      foreach my $attachment (@{$self->{attachments}}) {
+          my $filename    = $attachment;
+          $filename =~ s/(.*\/|$self->{fileid})//g;
+
+          $raw_string = read_binary($attachment);
+          $encoded = encode_base64( $raw_string );
+
+          $data->{attachment}->[$i]->{name} = $filename;
+          $data->{attachment}->[$i]->{content} = $encoded;
+
+          $i++;
+    }
+  }
+
+  $data->{subject} = $self->{subject};
+  $self->{message} = '.' if !$self->{message}; #sendinblue api throws error on blank message text so stuffing '.'
+
+  my $m = Text::Markdown->new;
+  $data->{htmlContent} = $m->markdown($self->{message});
+
+  my $jsonstr = $json->encode($data);
+
+  use File::Temp qw(tempfile);
+  my ($fh, $filename) = tempfile();
+  binmode( $fh, ":utf8" );
+
+  print $fh $jsonstr;
+  close $fh;
+
+  $commandline = q~
+  curl -sS --request POST \
+      --url https://api.sendinblue.com/v3/smtp/email \
+      --header 'accept: application/json' \
+      --header 'api-key:~.$self->{apikey}.q~' \
+      --header 'content-type: application/json' \
+      -d @~.$filename.q~ \
+      > /tmp/apierror.txt
+  ~;
+  system(qq~$commandline~);
+  unlink $filename;
+
+  return "";
 }
 
 

@@ -30,6 +30,10 @@ sub ask_dbcheck {
 	<th>|.$locale->text('Last transaction date').qq|</th>
 	<td><input name=lastdate size=11 value='$lastdate' title='$myconfig{dateformat}'></td>
      </tr>
+    <tr>
+	<th>|.$locale->text('Minimum rounding diff').qq|</th>
+	<td><input name=mindiff size=11 value=1></td>
+     </tr>
   </table>|.
 $locale->text('All transactions outside this date range will be reported as having invalid dates.').qq|
 <br><br><hr/>
@@ -592,9 +596,12 @@ WHERE trans_id NOT IN
   print qq|<th class=listheading>|.$locale->text('Net Amount').qq|</td>|;
   print qq|<th class=listheading>|.$locale->text('Invoice Tax').qq|</td>|;
   print qq|<th class=listheading>|.$locale->text('Line Tax').qq|</td>|;
+  print qq|<th class=listheading>|.$locale->text('Diff').qq|</td>|;
   print qq|</tr>|;
 
   $i = 0;
+
+  $form->{mindiff} *= 1;
 
   my $module;
   my $total_amount;
@@ -604,15 +611,20 @@ WHERE trans_id NOT IN
      $module = 'is' if $ref->{invoice} and $ref->{module} eq 'AR';
 
      if ($form->round_amount($ref->{tax1}, 2) != $form->round_amount($ref->{tax2}, 2)){
-     	print qq|<tr class=listrow$i>|;
-     	print qq|<td>$ref->{module}</td>|;
-     	print qq|<td><a href=$module.pl?action=edit&id=$ref->{id}&path=$form->{path}&login=$form->{login}&callback=$callback>$ref->{invnumber}</a></td>|;
-     	print qq|<td>$ref->{transdate}</td>|;
-     	print qq|<td align=right>|.$form->format_amount(\%myconfig, $ref->{amount}, 2).qq|</td>|;
-     	print qq|<td align=right>|.$form->format_amount(\%myconfig, $ref->{netamount}, 2).qq|</td>|;
-     	print qq|<td align=right>|.$form->format_amount(\%myconfig, $ref->{tax1}, 2).qq|</td>|;
-     	print qq|<td align=right>|.$form->format_amount(\%myconfig, $ref->{tax2}, 2).qq|</td>|;
-     	print qq|</tr>|;
+        $diff = $ref->{tax1} - $ref->{tax2};
+        $diff *= -1 if $diff < 1;
+        if ($diff > $form->{mindiff}){
+            print qq|<tr class=listrow$i>|;
+            print qq|<td>$ref->{module}</td>|;
+            print qq|<td><a href=$module.pl?action=edit&id=$ref->{id}&path=$form->{path}&login=$form->{login}&callback=$callback>$ref->{invnumber}</a></td>|;
+            print qq|<td>$ref->{transdate}</td>|;
+            print qq|<td align=right>|.$form->format_amount(\%myconfig, $ref->{amount}, 2).qq|</td>|;
+            print qq|<td align=right>|.$form->format_amount(\%myconfig, $ref->{netamount}, 2).qq|</td>|;
+            print qq|<td align=right>|.$form->format_amount(\%myconfig, $ref->{tax1}, 2).qq|</td>|;
+            print qq|<td align=right>|.$form->format_amount(\%myconfig, $ref->{tax2}, 2).qq|</td>|;
+            print qq|<td align=right>|.$form->format_amount(\%myconfig, $ref->{tax1} - $ref->{tax2}, 2).qq|</td>|;
+            print qq|</tr>|;
+        }
      }
   }
   print qq|</table>|;
@@ -620,6 +632,78 @@ WHERE trans_id NOT IN
   print qq|<h3>Updating null linetax column to blank ('') in acc_trans for correcting sorting in GL report.</h3>|;
   $dbh->do("update acc_trans set tax='' where tax is null");
   print qq|<p>... done.</p>|;
+
+  $query = qq|
+    SELECT
+        id,
+        invnumber,
+        amount,
+        invoice,
+        paid,
+            (SELECT ROUND(SUM(ac.amount)::numeric,2)
+            FROM acc_trans ac
+            JOIN chart c ON c.id = ac.chart_id
+            WHERE ac.trans_id = ap.id AND c.link LIKE '%AP_paid%')
+            - round(amount::numeric,2) diff
+    FROM ap
+    WHERE
+        ABS((SELECT ROUND(SUM(ac.amount)::numeric,2)
+        FROM acc_trans ac
+        JOIN chart c ON c.id = ac.chart_id
+        WHERE ac.trans_id = ap.id AND c.link LIKE '%AP_paid%' )
+        - round(amount::numeric,2)) > $form->{mindiff}
+    |;
+
+    $sth = $dbh->prepare($query) || $form->dberror($query);
+    $sth->execute;
+    print qq|<h2>AP invoices with rounding difference</h2>|;
+    print qq|<table>|;
+    print qq|<tr class=listheading>|;
+    print qq|<th class=listheading>|.$locale->text('ID').qq|</td>|;
+    print qq|<th class=listheading>|.$locale->text('Invoice Number').qq|</td>|;
+    print qq|<th class=listheading>|.$locale->text('Date').qq|</td>|;
+    print qq|<th class=listheading>|.$locale->text('Amount').qq|</td>|;
+    print qq|<th class=listheading>|.$locale->text('Paid').qq|</td>|;
+    print qq|<th class=listheading>|.$locale->text('Diff').qq|</td>|;
+    print qq|</tr>|;
+    $i = 0;
+
+
+    while ($ref = $sth->fetchrow_hashref(NAME_lc)){
+         print qq|<tr class=listrow$i>|;
+         print qq|<td>$ref->{id}</td>|;
+         if ($ref->{invoice}){
+             $module = 'ir';
+         } else {
+             $module = 'ap';
+         }
+         print qq|<td><a href=$module.pl?action=edit&id=$ref->{id}&path=$form->{path}&login=$form->{login}&callback=$callback>$ref->{invnumber}</a></td>|;
+         print qq|<td>$ref->{transdate}</td>|;
+         print qq|<td align=right>$ref->{amount}</td>|;
+         print qq|<td align=right>$ref->{paid}</td>|;
+         print qq|<td align=right>$ref->{diff}</td>|;
+         print qq|</tr>|;
+      }
+    print qq|
+    </table>
+|;
+
+
+  #-------------------------------------------------------------
+  # 8. Update account description in acc_trans for tax accounts.
+  #-------------------------------------------------------------
+
+  print qq|<h1>Line tax description change fix</h1>|;
+  print qq|<p>Correcting tax descriptions in line tax which have been changed in chart (if any)</p>|;
+  $dbh->do(qq~
+      UPDATE acc_trans SET
+        tax=(SELECT accno || '--' || description
+                FROM chart
+                WHERE chart.id = acc_trans.tax_chart_id)
+      WHERE tax_chart_id IN (SELECT id FROM chart)
+  ~);
+  print qq|<p>...Done.</p>|;
+
   $dbh->disconnect;
 }
 
@@ -662,21 +746,61 @@ sub click_here_to_delete_blank_non_tax_rows {
 }
 
 sub fix_invoicetax_for_alltaxes_report {
-    #use DBIx::Simple;
+
+    $form->{title} = $locale->text('Fix Invoicetax table for all taxes report');
+    $form->header;
+    print qq|
+<body>
+  <table width=100%>
+     <tr><th class=listtop>$form->{title}</th></tr>
+  </table><br />
+|;
+
+    if (!$form->{runit}){
+        $form->{nextsub} = 'fix_invoicetax_for_alltaxes_report';
+        $form->{runit} = 1;
+        $form->info("Click the button below to run this procedure ...");
+        print qq|
+<form method=post action=$form->{script}>
+<input type=submit class=submit name=action value="|.$locale->text('Continue').qq|">
+|;
+        $form->hide_form(qw(runit title path nextsub login));
+
+        print qq|
+</form>
+|;
+        return;
+    }
+
+    use DBIx::Simple;
     my $dbh = $form->dbconnect(\%myconfig);
-    #my $dbs = DBIx::Simple->connect($dbh);
+    my $dbs = DBIx::Simple->connect($dbh);
 
     $form->info("Building invoicetax table<br>\n");
     $query = qq|DELETE FROM invoicetax|;
     $dbh->do($query) || $form->dberror($query);
 
+    $dbs->query("DROP TABLE taxtmp");
+    $dbs->query("CREATE TABLE taxtmp AS SELECT chart_id, rate, validto AS validfrom, validto FROM tax");
+    $dbs->query("UPDATE taxtmp SET validto = '31-12-2030' WHERE validto IS NULL");
+    my @alltaxes = $dbs->query("SELECT DISTINCT chart_id FROM tax")->hashes;
+    for my $tax (@alltaxes){
+        my @onetax = $dbs->query("SELECT * FROM taxtmp WHERE chart_id = ? ORDER BY validto", $tax->{chart_id})->hashes;
+        my $i = 1;
+        my $validfrom = '01-01-2000';
+        for (@onetax){
+            $dbs->query("UPDATE taxtmp SET validfrom=? WHERE chart_id = ? AND validto = ?", $validfrom, $_->{chart_id}, $_->{validto});
+            $validfrom = $dbs->query("SELECT '$_->{validto}'::DATE + 1")->list;
+        }
+    }
+
     my $query = qq|
 	    SELECT i.id, i.trans_id, i.parts_id, i.qty * i.sellprice amount,
-		(i.qty * i.sellprice * tax.rate) AS taxamount, 
-		ptax.chart_id
+		(i.qty * i.sellprice * tax.rate) AS taxamount,
+		ptax.chart_id, tax.validfrom, tax.validto
 	    FROM invoice i
 	    JOIN partstax ptax ON (ptax.parts_id = i.parts_id)
-	    JOIN tax ON (tax.chart_id = ptax.chart_id)
+	    JOIN taxtmp tax ON (tax.chart_id = ptax.chart_id)
 	    WHERE i.trans_id = ?
 	    AND ptax.chart_id = ?|;
     my $itsth = $dbh->prepare($query) || $form->dberror($query);
@@ -686,7 +810,7 @@ sub fix_invoicetax_for_alltaxes_report {
     my $itins = $dbh->prepare($query) || $form->dberror($query);
 
     ## 1. First AR
-    $query = qq|SELECT ar.id, ar.customer_id, ctax.chart_id 
+    $query = qq|SELECT ar.id, ar.customer_id, ctax.chart_id, ar.transdate
 		FROM ar
 		JOIN customertax ctax ON (ar.customer_id = ctax.customer_id)|;
     $sth = $dbh->prepare($query) || $form->dberror($query);
@@ -694,12 +818,16 @@ sub fix_invoicetax_for_alltaxes_report {
     while ($ref = $sth->fetchrow_hashref(NAME_lc)){
 	    $itsth->execute($ref->{id}, $ref->{chart_id});
         while ($itref = $itsth->fetchrow_hashref(NAME_lc)){
-            $itins->execute($itref->{trans_id}, $itref->{id}, $itref->{chart_id}, $itref->{amount}, $itref->{taxamount});
+            if (($form->datetonum(\%myconfig, $ref->{transdate}) >= $form->datetonum(\%myconfig, $itref->{validfrom}))
+                    and ($form->datetonum(\%myconfig, $ref->{transdate}) <= $form->datetonum(\%myconfig, $itref->{validto}))){
+                $form->info("Processing $itref->{trans_id}<br/>\n");
+                $itins->execute($itref->{trans_id}, $itref->{id}, $itref->{chart_id}, $itref->{amount}, $itref->{taxamount});
+            }
         }
     }
 
     ## 2. Now AP
-    $query = qq|SELECT ap.id, ap.vendor_id, vtax.chart_id 
+    $query = qq|SELECT ap.id, ap.vendor_id, vtax.chart_id, ap.transdate
 		FROM ap
 		JOIN vendortax vtax ON (ap.vendor_id = vtax.vendor_id)|;
     $sth = $dbh->prepare($query) || $form->dberror($query);
@@ -707,9 +835,14 @@ sub fix_invoicetax_for_alltaxes_report {
     while ($ref = $sth->fetchrow_hashref(NAME_lc)){
 	$itsth->execute($ref->{id}, $ref->{chart_id});
        while ($itref = $itsth->fetchrow_hashref(NAME_lc)){
-          $itins->execute($itref->{trans_id}, $itref->{id}, $itref->{chart_id}, $itref->{amount}*-1, $itref->{taxamount}*-1);
+            if (($form->datetonum(\%myconfig, $ref->{transdate}) >= $form->datetonum(\%myconfig, $itref->{validfrom}))
+                    and ($form->datetonum(\%myconfig, $ref->{transdate}) <= $form->datetonum(\%myconfig, $itref->{validto}))){
+                $form->info("Processing $itref->{trans_id}<br/>\n");
+                $itins->execute($itref->{trans_id}, $itref->{id}, $itref->{chart_id}, $itref->{amount}*-1, $itref->{taxamount}*-1);
+            }
        }
     }
+    $dbs->query("DROP TABLE taxtmp");
     $form->info($locale->text('Done ...'));
 }
 
