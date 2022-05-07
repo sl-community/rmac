@@ -98,6 +98,7 @@
 % use File::Basename;
 % my $prefix = dirname(url_for('/')); 
 
+
 <form method="post" action="<%= $prefix %>/admin.pl">
 %= tag 'hidden', name => 'login', value => 'root login';
 
